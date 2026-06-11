@@ -208,12 +208,12 @@ function ChatPage() {
       // Update local storage if it's the current user
       const localUser = JSON.parse(localStorage.getItem("userInfo"));
       if (localUser && (localUser._id === data.userId || localUser.id === data.userId)) {
-        localUser.username = data.username;
-        localUser.avatar = data.avatar;
-        localUser.about = data.about || data.status;
-        localUser.status = data.status;
+        localUser.username = data.username ?? localUser.username;
+        localUser.avatar = data.avatar ?? localUser.avatar;
+        localUser.about = data.about ?? data.status ?? localUser.about;
+        localUser.status = data.status ?? localUser.status;
         localStorage.setItem("userInfo", JSON.stringify(localUser));
-        setCurrentUser(localUser);
+        setCurrentUser({ ...localUser });
       }
 
       setChats((prev) =>

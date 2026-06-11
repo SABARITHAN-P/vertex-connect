@@ -38,38 +38,45 @@
 }
 
 .dark {
-  --bg-sidebar: #17212b;
-  /* Deep Slate Blue (Telegram style) */
-  --bg-sidebar-rail: #0e1621;
-  /* Midnight Blue (Telegram style) */
-  --bg-header: #17212b;
-  /* Deep Slate Blue */
-  --bg-chat: #0e1621;
-  /* Midnight Blue */
-  --bg-hover: #202b36;
-  /* Sleek hover */
-  --bg-card: #17212b;
-  --border-color: #101921;
-  /* Slate-charcoal border line */
-  --text-primary: #f5f6f7;
-  /* Bright slate-white text */
-  --text-secondary: #7f91a4;
-  /* Muted slate blue secondary text */
-  --bubble-incoming: #182533;
-  /* Slate Blue incoming bubble */
+  --bg-sidebar: #0e0e11;
+  /* Deep obsidian/zinc sidebar */
+  --bg-sidebar-rail: #09090b;
+  /* Sleek dark slate rail */
+  --bg-header: #0e0e11;
+  /* Dark header matching sidebar */
+  --bg-chat: #09090b;
+  /* Midnight chat background */
+  --bg-hover: #1c1c21;
+  /* Sophisticated hover (zinc-800/60) */
+  --bg-card: #141418;
+  /* Card/Modal elevation */
+  --border-color: #1d1d23;
+  /* Ultra-thin, low-contrast separator lines */
+  --text-primary: #f4f4f5;
+  /* Crisp, bright zinc-100 text */
+  --text-secondary: #9ea0a8;
+  /* Clean muted zinc-400 secondary text */
+  --bubble-incoming: #18181c;
+  /* Refined slate/charcoal incoming bubble */
 
-  /* Medium Slate Blue/Indigo accents for Dark Mode */
-  --brand-color: #2b5278;
-  --bubble-outgoing: #2b5278;
+  /* Vibrant modern Indigo brand & outgoing accents */
+  --brand-color: #6366f1;
+  /* Indigo-500 */
+  --bubble-outgoing: #2e3563;
+  /* Muted pleasant indigo-violet */
   --text-outgoing: #ffffff;
-  --read-receipt: #4fc3f7;
+  --read-receipt: #38bdf8;
+  /* Sky blue checkmarks */
 
-  --bg-input: #17212b;
-  --bg-active: #24303f;
-  /* Active state */
+  --bg-input: #1c1c21;
+  /* Clean input background */
+  --bg-active: #23232a;
+  /* Tactile active state */
   --text-inverse: #ffffff;
-  --bg-drawer: #17212b;
-  --bg-modal: #17212b;
+  --bg-drawer: #0e0e11;
+  /* Matching sidebar */
+  --bg-modal: #121216;
+  /* Clean overlay cards */
 }
 
 @theme {
@@ -137,7 +144,7 @@
   /* Dark Mode blending: black bg (invisible under screen), white lines -> white */
   filter: none;
   mix-blend-mode: screen;
-  opacity: 0.08;
+  opacity: 0.03;
 }
 
 /* =========================================================

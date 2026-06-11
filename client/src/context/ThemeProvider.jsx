@@ -1,16 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
+import { ThemeContext } from "./ThemeContext";
 import api from "@services/api";
 import { socket } from "@socket/socket";
-
-const ThemeContext = createContext();
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
-};
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
@@ -100,6 +91,7 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem("enter_to_send", enterToSend.toString());
   }, [enterToSend]);
 
+  // Save sound/scroll settings
   useEffect(() => {
     localStorage.setItem("sounds_enabled", soundsEnabled.toString());
   }, [soundsEnabled]);
@@ -118,7 +110,6 @@ export const ThemeProvider = ({ children }) => {
         setWallpaperValue(data.wallpaperValue || "");
         setWallpaperOpacity(data.wallpaperOpacity !== undefined ? data.wallpaperOpacity : 100);
 
-        // Sync custom general preferences
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.fontStyle) setFontStyle(data.fontStyle);
         if (data.compactMode !== undefined) setCompactMode(data.compactMode);
@@ -134,7 +125,6 @@ export const ThemeProvider = ({ children }) => {
   // Update settings on server and locally
   const updateAppearance = async (settings) => {
     try {
-      // Optimistic update locally
       if (settings.themeMode !== undefined) setTheme(settings.themeMode);
       if (settings.wallpaperType !== undefined) setWallpaperType(settings.wallpaperType);
       if (settings.wallpaperValue !== undefined) setWallpaperValue(settings.wallpaperValue);
@@ -203,7 +193,7 @@ export const ThemeProvider = ({ children }) => {
       left: 0,
       width: "100%",
       height: "100%",
-      backgroundColor: activeTheme === "dark" ? "rgba(14, 22, 33, " + overlayOpacity + ")" : "rgba(248, 250, 252, " + overlayOpacity + ")",
+      backgroundColor: activeTheme === "dark" ? "rgba(9, 9, 11, " + overlayOpacity + ")" : "rgba(248, 250, 252, " + overlayOpacity + ")",
       zIndex: 1,
       pointerEvents: "none",
       transition: "all 0.3s ease",
@@ -213,7 +203,7 @@ export const ThemeProvider = ({ children }) => {
       return {
         backgroundStyle: {
           ...baseStyle,
-          backgroundColor: activeTheme === "dark" ? "#0e1621" : "#efeae2",
+          backgroundColor: activeTheme === "dark" ? "#09090b" : "#efeae2",
         },
         overlayStyle,
         className: "whatsapp-pattern",
@@ -224,7 +214,7 @@ export const ThemeProvider = ({ children }) => {
       return {
         backgroundStyle: {
           ...baseStyle,
-          backgroundColor: value || (activeTheme === "dark" ? "#090d16" : "#f8fafc"),
+          backgroundColor: value || (activeTheme === "dark" ? "#09090b" : "#f8fafc"),
         },
         overlayStyle: {
           ...overlayStyle,
@@ -238,7 +228,7 @@ export const ThemeProvider = ({ children }) => {
       return {
         backgroundStyle: {
           ...baseStyle,
-          background: value || "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+          background: value || "linear-gradient(135deg, #09090b, #11102b, #09090b)",
         },
         overlayStyle,
         className: "",

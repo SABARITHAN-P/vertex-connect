@@ -228,6 +228,26 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
     }
   };
 
+  const handleFileDownload = async (e, fileUrl, fileName) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Direct file download failed:", error);
+      window.open(fileUrl, "_blank");
+    }
+  };
+
   const uploadState = uploadQueue?.[_id];
   const isFailed = uploadState?.status === "failed";
   const progress = uploadState?.progress || 0;
@@ -601,7 +621,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
                         );
                       }
                       return (
-                        <a key={index} href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 bg-black/20 p-2.5 rounded-lg hover:bg-black/30 transition">
+                        <a key={index} href={item.url} onClick={(e) => handleFileDownload(e, item.url, item.fileName)} className="flex items-center gap-2.5 bg-black/20 p-2.5 rounded-lg hover:bg-black/30 transition">
                           <FileText size={24} className="shrink-0 text-gray-300" />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs truncate font-medium">{item.fileName}</p>

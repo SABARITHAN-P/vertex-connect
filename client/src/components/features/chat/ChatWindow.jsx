@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import api from "@services/api";
 import logo from "@assets/vite.svg";
@@ -571,16 +572,16 @@ function ChatWindow({
         if (!selectedUser.isGroupChat && selectedUser._id === data.userId) {
           setSelectedUser((prev) => ({
             ...prev,
-            username: data.username || prev.username,
-            avatar: data.avatar || prev.avatar,
+            username: data.username !== undefined ? data.username : prev.username,
+            avatar: data.avatar !== undefined ? data.avatar : prev.avatar,
           }));
         } else if (selectedUser.isGroupChat) {
           setSelectedUser((prev) => {
             const updatedParticipants = prev.participants?.map((p) =>
-              p._id === data.userId ? { ...p, username: data.username || p.username, avatar: data.avatar || p.avatar } : p
+              p._id === data.userId ? { ...p, username: data.username !== undefined ? data.username : p.username, avatar: data.avatar !== undefined ? data.avatar : p.avatar } : p
             );
             const updatedFullChatParticipants = prev.fullChat?.participants?.map((p) =>
-              p._id === data.userId ? { ...p, username: data.username || p.username, avatar: data.avatar || p.avatar } : p
+              p._id === data.userId ? { ...p, username: data.username !== undefined ? data.username : p.username, avatar: data.avatar !== undefined ? data.avatar : p.avatar } : p
             );
             return {
               ...prev,
@@ -596,7 +597,7 @@ function ChatWindow({
         prev.map((msg) => {
           if (msg.sender && (msg.sender._id === data.userId || msg.sender === data.userId)) {
             const updatedSender = typeof msg.sender === "object"
-              ? { ...msg.sender, username: data.username || msg.sender.username, avatar: data.avatar || msg.sender.avatar }
+              ? { ...msg.sender, username: data.username !== undefined ? data.username : msg.sender.username, avatar: data.avatar !== undefined ? data.avatar : msg.sender.avatar }
               : msg.sender;
             return {
               ...msg,
@@ -614,7 +615,7 @@ function ChatWindow({
           const updatedParticipants = chat.participants?.map((p) => {
             if (p._id === data.userId) {
               hasUpdated = true;
-              return { ...p, username: data.username || p.username, avatar: data.avatar || p.avatar };
+              return { ...p, username: data.username !== undefined ? data.username : p.username, avatar: data.avatar !== undefined ? data.avatar : p.avatar };
             }
             return p;
           });
@@ -625,7 +626,7 @@ function ChatWindow({
             updatedLastMessage = {
               ...chat.lastMessage,
               sender: typeof chat.lastMessage.sender === "object"
-                ? { ...chat.lastMessage.sender, username: data.username || chat.lastMessage.sender.username, avatar: data.avatar || chat.lastMessage.sender.avatar }
+                ? { ...chat.lastMessage.sender, username: data.username !== undefined ? data.username : chat.lastMessage.sender.username, avatar: data.avatar !== undefined ? data.avatar : chat.lastMessage.sender.avatar }
                 : chat.lastMessage.sender,
             };
           }
@@ -847,22 +848,26 @@ function ChatWindow({
     } else {
       until = now + durationHours * 60 * 60 * 1000;
     }
-    mutedData[selectedUser.chatId] = until;
-    localStorage.setItem("muted_chats", JSON.stringify(mutedData));
+    if (selectedUser?.chatId) {
+      mutedData[selectedUser.chatId] = until;
+      localStorage.setItem("muted_chats", JSON.stringify(mutedData));
+    }
     setIsMuted(true);
     setShowMuteModal(false);
     setShowMenu(false);
     toast.success("Notifications muted");
-  }, [selectedUser?.chatId]);
+  }, [selectedUser]);
 
   const handleUnmute = useCallback(() => {
     const mutedData = JSON.parse(localStorage.getItem("muted_chats") || "{}");
-    delete mutedData[selectedUser.chatId];
-    localStorage.setItem("muted_chats", JSON.stringify(mutedData));
+    if (selectedUser?.chatId) {
+      delete mutedData[selectedUser.chatId];
+      localStorage.setItem("muted_chats", JSON.stringify(mutedData));
+    }
     setIsMuted(false);
     setShowMenu(false);
     toast.success("Notifications unmuted");
-  }, [selectedUser?.chatId]);
+  }, [selectedUser]);
 
   const handleClearChatSubmit = async () => {
     try {

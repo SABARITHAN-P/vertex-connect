@@ -5,7 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "./App";
-import { ThemeProvider } from "@context/ThemeContext";
+import { ThemeProvider } from "@context/ThemeProvider";
 import { CallProvider } from "@context/CallContext";
 import "./index.css";
 

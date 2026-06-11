@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useRef } from "react";
 import { X, RotateCw, ZoomIn, ZoomOut, Sparkles, Sun, Contrast } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 
@@ -142,22 +143,25 @@ function ImageEditorModal({ isOpen, onClose, imageSrc, onSave }) {
   const activeFilterStr = getFilterStyle(activeFilter);
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in">
-      <div className="bg-app-modal border border-app-border text-app-text-primary w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-fade-in">
+      <div className="bg-[#0f0f12] border border-white/10 text-gray-200 w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
         {/* HEADER */}
-        <div className="px-5 py-4 border-b border-app-border flex justify-between items-center bg-app-header/60">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-brand">Edit Profile Photo</h2>
-          <button onClick={onClose} className="p-1 rounded-full text-app-text-secondary hover:text-app-text-primary transition cursor-pointer">
-            <X size={20} />
+        <div className="px-5 py-4 border-b border-white/10 flex justify-between items-center bg-[#131317]">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#818cf8]">Edit Profile Photo</h2>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+          >
+            <X size={16} />
           </button>
         </div>
 
         {/* WORKSPACE AREA */}
-        <div className="flex-1 p-6 flex flex-col items-center justify-center bg-app-drawer overflow-y-auto">
+        <div className="flex-1 p-6 flex flex-col items-center justify-center bg-[#070709] overflow-y-auto">
           {/* CROPPER BOX CONTAINER */}
           <div
             ref={containerRef}
-            className="w-[300px] h-[300px] relative overflow-hidden rounded-full border-2 border-brand/40 bg-app-modal cursor-grab active:cursor-grabbing shadow-inner flex items-center justify-center"
+            className="w-[280px] h-[280px] relative overflow-hidden rounded-full border border-white/20 bg-[#121214] cursor-grab active:cursor-grabbing shadow-2xl flex items-center justify-center"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -177,22 +181,22 @@ function ImageEditorModal({ isOpen, onClose, imageSrc, onSave }) {
                 filter: `brightness(${brightness}%) contrast(${contrast}%) ${activeFilterStr}`,
                 width: "100%",
                 height: "100%",
-                objectFit: "contain"
+                objectFit: "cover"
               }}
             />
 
             {/* Circular Preview Ring Highlight Overlay */}
-            <div className="absolute inset-0 rounded-full border-[3px] border-brand pointer-events-none opacity-50 shadow-md" />
+            <div className="absolute inset-0 rounded-full border border-white/30 pointer-events-none opacity-40 shadow-inner" />
           </div>
-          <span className="text-[10px] text-app-text-secondary mt-2 italic font-semibold">
-            Drag to reposition inside the circle
+          <span className="text-[10px] text-gray-500 mt-2.5 italic font-medium">
+            Drag to reposition image inside the circle
           </span>
 
           {/* CONTROLS ZONE */}
-          <div className="w-full mt-6 space-y-4">
+          <div className="w-full mt-5 bg-[#121216] border border-white/5 rounded-xl p-4.5 space-y-4">
             {/* ZOOM SLIDER */}
-            <div className="flex items-center gap-4 bg-app-input/40 p-2.5 rounded-xl border border-app-border/30">
-              <ZoomOut size={16} className="text-app-text-secondary" />
+            <div className="flex items-center gap-3">
+              <ZoomOut size={14} className="text-gray-400" />
               <input
                 type="range"
                 min="1"
@@ -200,24 +204,24 @@ function ImageEditorModal({ isOpen, onClose, imageSrc, onSave }) {
                 step="0.05"
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="flex-1 accent-brand h-1 bg-app-hover rounded-lg cursor-pointer"
+                className="flex-1 h-1 rounded-lg bg-white/10 cursor-pointer accent-[#818cf8] outline-none"
               />
-              <ZoomIn size={16} className="text-app-text-secondary" />
+              <ZoomIn size={14} className="text-gray-400" />
               <button
                 onClick={rotateImage}
-                className="p-1.5 bg-brand/20 text-brand border border-brand/30 rounded-lg hover:bg-brand/30 transition shrink-0 cursor-pointer"
+                className="p-2 bg-[#818cf8]/10 text-[#818cf8] hover:bg-[#818cf8]/20 border border-[#818cf8]/20 rounded-lg transition shrink-0 cursor-pointer"
                 title="Rotate 90°"
               >
-                <RotateCw size={16} />
+                <RotateCw size={14} />
               </button>
             </div>
 
             {/* ADJUSTMENTS ZONE */}
             <div className="grid grid-cols-2 gap-3">
               {/* Brightness */}
-              <div className="flex flex-col gap-1 bg-app-input/40 p-2.5 rounded-xl border border-app-border/30 text-xs">
-                <span className="text-app-text-secondary font-medium flex items-center gap-1.5">
-                  <Sun size={12} className="text-brand" /> Brightness
+              <div className="flex flex-col gap-1.5 bg-white/[0.02] border border-white/5 p-2.5 rounded-lg text-[10px] text-gray-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Sun size={12} className="text-[#818cf8]" /> Brightness
                 </span>
                 <input
                   type="range"
@@ -225,14 +229,14 @@ function ImageEditorModal({ isOpen, onClose, imageSrc, onSave }) {
                   max="150"
                   value={brightness}
                   onChange={(e) => setBrightness(parseInt(e.target.value))}
-                  className="accent-brand h-1 bg-app-hover rounded-lg mt-1 cursor-pointer"
+                  className="h-1 bg-white/10 rounded-lg cursor-pointer accent-[#818cf8] outline-none"
                 />
               </div>
 
               {/* Contrast */}
-              <div className="flex flex-col gap-1 bg-app-input/40 p-2.5 rounded-xl border border-app-border/30 text-xs">
-                <span className="text-app-text-secondary font-medium flex items-center gap-1.5">
-                  <Contrast size={12} className="text-brand" /> Contrast
+              <div className="flex flex-col gap-1.5 bg-white/[0.02] border border-white/5 p-2.5 rounded-lg text-[10px] text-gray-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Contrast size={12} className="text-[#818cf8]" /> Contrast
                 </span>
                 <input
                   type="range"
@@ -240,25 +244,25 @@ function ImageEditorModal({ isOpen, onClose, imageSrc, onSave }) {
                   max="150"
                   value={contrast}
                   onChange={(e) => setContrast(parseInt(e.target.value))}
-                  className="accent-brand h-1 bg-app-hover rounded-lg mt-1 cursor-pointer"
+                  className="h-1 bg-white/10 rounded-lg cursor-pointer accent-[#818cf8] outline-none"
                 />
               </div>
             </div>
 
             {/* FILTERS PANEL */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] text-app-text-secondary uppercase font-bold tracking-wider block flex items-center gap-1">
-                <Sparkles size={11} className="text-brand" /> Color Effects
+            <div className="space-y-2">
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                <Sparkles size={12} className="text-[#818cf8]" /> Color Effects
               </span>
-              <div className="flex items-center gap-2 overflow-x-auto py-1.5 scrollbar-thin">
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
                 {filters.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setActiveFilter(f.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 border transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
                       activeFilter === f.id
-                        ? "bg-brand text-white border-brand"
-                        : "bg-app-hover text-app-text-secondary border-app-border hover:bg-app-hover/80"
+                        ? "bg-[#818cf8] text-white border-[#818cf8] shadow-md"
+                        : "bg-white/[0.04] text-gray-400 border-white/5 hover:bg-white/[0.08] hover:text-white"
                     }`}
                   >
                     {f.name}
@@ -270,16 +274,16 @@ function ImageEditorModal({ isOpen, onClose, imageSrc, onSave }) {
         </div>
 
         {/* FOOTER */}
-        <div className="px-5 py-4 border-t border-app-border flex justify-end gap-3 bg-app-header/60">
+        <div className="px-5 py-4 border-t border-white/10 flex justify-end gap-3 bg-[#131317]">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-app-text-secondary hover:text-app-text-primary transition cursor-pointer"
+            className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="bg-brand hover:opacity-90 text-white px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition shadow-md cursor-pointer"
+            className="bg-[#818cf8] hover:bg-[#6366f1] text-white px-5 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition shadow-lg cursor-pointer active:scale-95"
           >
             Save Photo
           </button>

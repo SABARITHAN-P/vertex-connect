@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect } from "react";
 import PrivacySettingsDrawer from "@components/features/settings/PrivacySettingsDrawer";
 import FollowRequestsDrawer from "@components/features/social/FollowRequestsDrawer";
 import ThemeBackgroundDrawer from "@components/features/settings/ThemeBackgroundDrawer";
@@ -11,15 +12,12 @@ import {
   Search, 
   Monitor, 
   User, 
-  KeyRound, 
   Lock, 
   MessageSquare, 
-  Video, 
-  Bell, 
-  Keyboard, 
   HelpCircle, 
   LogOut,
-  Users
+  Users,
+  ChevronRight
 } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 
@@ -36,9 +34,7 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
   // Centralized ESC key support: close settings drawer on Escape. Priority: 5
   useEscapeKey(onClose, true, 5);
 
-  useEffect(() => {
-    fetchRequestCount();
-  }, []);
+
 
   const fetchRequestCount = async () => {
     try {
@@ -48,6 +44,10 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
       console.error("Failed to fetch follow requests count:", error);
     }
   };
+
+  useEffect(() => {
+    fetchRequestCount();
+  }, []);
 
   const handleLogout = () => {
     if (confirm("Are you sure you want to log out of Vertex Connect?")) {
@@ -72,7 +72,7 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
     {
       id: "profile",
       title: "Profile",
-      desc: "Name, profile picture",
+      desc: "Name, profile picture, status",
       icon: User,
       action: onOpenProfile,
     },
@@ -89,6 +89,7 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
       desc: "View and manage your followers and following lists",
       icon: Users,
       action: () => setShowFollowersFollowing(true),
+      badgeCount: requestCount,
     },
     {
       id: "chats",
@@ -114,49 +115,42 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
   );
 
   return (
-    <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none">
+    <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none animate-slide-in">
       
       {/* HEADER */}
-      <div className="h-[60px] bg-app-header flex items-center p-4 gap-4 border-b border-app-border shrink-0">
+      <div className="h-[60px] bg-app-header flex items-center p-4 gap-4 border-b border-app-border/80 shrink-0">
         <button
           onClick={onClose}
-          className="p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition"
+          className="p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer"
         >
           <ArrowLeft size={20} />
         </button>
-        <span className="text-app-text-primary font-semibold text-lg">Settings</span>
+        <span className="text-app-text-primary font-semibold text-lg animate-fade-in">Settings</span>
       </div>
 
       {/* BODY */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
+      <div className="flex-1 overflow-y-auto flex flex-col pb-6">
         
-        {/* USER NAME TITLE */}
-        <div className="px-6 pt-5 pb-2 text-left">
-          <h2 className="text-app-text-primary text-2xl font-bold tracking-tight">
-            {currentUser.username || "sabari"}
-          </h2>
-        </div>
-
         {/* INTERACTIVE SEARCH BAR */}
-        <div className="px-6 py-3">
-          <div className="bg-app-header rounded-xl flex items-center px-4 border border-app-border focus-within:border-brand transition-all duration-200">
-            <Search size={18} className="text-app-text-secondary shrink-0" />
+        <div className="px-6 pt-5 pb-2">
+          <div className="bg-app-header rounded-xl flex items-center px-4 border border-app-border/80 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand/35 transition-all duration-200">
+            <Search size={16} className="text-app-text-secondary shrink-0" />
             <input
               type="text"
               placeholder="Search settings"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent outline-none px-3 py-3 text-sm text-app-text-primary placeholder-app-text-secondary"
+              className="w-full bg-transparent outline-none px-3 py-3 text-xs text-app-text-primary placeholder-app-text-secondary"
             />
           </div>
         </div>
 
-        {/* LARGE INTERACTIVE AVATAR CARD */}
+        {/* INTERACTIVE PROFILE BANNER */}
         <div 
           onClick={onOpenProfile}
-          className="mx-6 my-2 p-4 bg-app-header/40 border border-app-border rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-app-hover hover:border-app-border transition duration-200"
+          className="mx-6 my-3 p-4 bg-app-header/40 border border-app-border/60 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-app-hover hover:border-app-border transition duration-200"
         >
-          <div className="w-24 h-24 rounded-full bg-brand flex items-center justify-center overflow-hidden border border-app-border shadow-lg">
+          <div className="w-14 h-14 rounded-full bg-brand flex items-center justify-center overflow-hidden border border-app-border/40 shrink-0">
             {currentUser.avatar ? (
               <img
                 src={currentUser.avatar}
@@ -164,43 +158,54 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-white text-3xl font-bold">
+              <span className="text-white text-xl font-bold">
                 {getInitials(currentUser.username)}
               </span>
             )}
           </div>
-          <span className="text-app-text-secondary text-xs font-medium mt-3 uppercase tracking-wider">
-            Click to edit profile settings
-          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-app-text-primary text-sm font-semibold truncate">
+              {currentUser.username || "User"}
+            </h3>
+            <p className="text-app-text-secondary text-[11px] mt-0.5 truncate">
+              {currentUser.about || currentUser.status || "Hey there! I am using Vertex Connect."}
+            </p>
+            <span className="text-[10px] text-app-text-secondary/80 mt-1 block">
+              View and edit profile settings
+            </span>
+          </div>
         </div>
 
         {/* SETTINGS OPTIONS LIST */}
-        <div className="flex-1 px-4 py-2 space-y-1">
+        <div className="flex-1 px-6 py-2 space-y-1.5">
           {filteredItems.map((item) => {
             const IconComponent = item.icon;
             return (
               <button
                 key={item.id}
                 onClick={item.action}
-                className="w-full flex items-start gap-4 p-3.5 hover:bg-app-hover rounded-xl transition duration-150 text-left"
+                className="w-full flex items-center gap-4 p-3.5 bg-app-header/20 border border-app-border/40 hover:bg-app-hover hover:border-app-border rounded-xl transition duration-150 text-left cursor-pointer group"
               >
-                <div className="p-2 text-app-text-secondary bg-app-header rounded-xl shrink-0">
-                  <IconComponent size={20} className="text-app-text-primary" />
+                <div className="p-2 text-app-text-secondary bg-app-header border border-app-border/60 rounded-xl shrink-0 group-hover:text-brand group-hover:border-brand/30 transition">
+                  <IconComponent size={18} />
                 </div>
                 <div className="flex-1 min-w-0 flex items-center justify-between">
-                  <div>
-                    <div className="text-app-text-primary text-sm font-semibold tracking-wide leading-tight">
+                  <div className="min-w-0 pr-2">
+                    <div className="text-app-text-primary text-xs font-semibold tracking-wide leading-tight group-hover:text-brand transition-colors">
                       {item.title}
                     </div>
-                    <div className="text-app-text-secondary text-xs mt-0.5 leading-snug truncate">
+                    <div className="text-app-text-secondary text-[10px] mt-0.5 leading-snug truncate">
                       {item.desc}
                     </div>
                   </div>
-                  {item.badgeCount > 0 && (
-                    <div className="bg-brand text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 shadow-sm animate-pulse mr-1">
-                      {item.badgeCount}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.badgeCount > 0 && (
+                      <div className="bg-brand text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse mr-1">
+                        {item.badgeCount}
+                      </div>
+                    )}
+                    <ChevronRight size={14} className="text-app-text-secondary/60 group-hover:text-brand transition-colors transform group-hover:translate-x-0.5 duration-200" />
+                  </div>
                 </div>
               </button>
             );
@@ -210,21 +215,27 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
           {filteredItems.length > 0 && (
             <button
               onClick={handleLogout}
-              className="w-full flex items-start gap-4 p-3.5 hover:bg-[#ff003c]/10 rounded-xl transition duration-150 text-left mt-2 group border border-transparent hover:border-[#ff003c]/20"
+              className="w-full flex items-center gap-4 p-3.5 bg-app-header/20 border border-app-border/40 hover:bg-app-hover hover:border-red-500/10 rounded-xl transition duration-150 text-left cursor-pointer group"
             >
-              <div className="p-2 text-red-500 bg-[#ff003c]/10 rounded-xl group-hover:bg-[#ff003c]/20 shrink-0 transition">
-                <LogOut size={20} />
+              <div className="p-2 text-app-text-secondary bg-app-header border border-app-border/60 rounded-xl shrink-0 group-hover:text-red-500 group-hover:border-red-500/30 transition">
+                <LogOut size={18} />
               </div>
-              <div className="flex-1 pt-1">
-                <span className="text-red-500 text-sm font-semibold tracking-wide leading-tight">
-                  Log out
-                </span>
+              <div className="flex-1 min-w-0 flex items-center justify-between">
+                <div>
+                  <div className="text-app-text-primary text-xs font-semibold tracking-wide leading-tight group-hover:text-red-500 transition-colors">
+                    Log out
+                  </div>
+                  <div className="text-app-text-secondary text-[10px] mt-0.5 leading-snug">
+                    Sign out of your active session
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-app-text-secondary/60 group-hover:text-red-500 transition-colors transform group-hover:translate-x-0.5 duration-200" />
               </div>
             </button>
           )}
 
           {filteredItems.length === 0 && (
-            <div className="text-center text-app-text-secondary text-xs py-8">
+            <div className="text-center text-app-text-secondary text-xs py-8 bg-app-header/25 rounded-xl border border-dashed border-app-border/60">
               No matching settings found
             </div>
           )}

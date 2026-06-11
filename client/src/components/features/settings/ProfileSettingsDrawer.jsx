@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import api from "@services/api";
-import { ArrowLeft, Camera, Edit2, Check, X } from "lucide-react";
+import { ArrowLeft, Camera, Edit2, Check, X, User, Info } from "lucide-react";
 import ImageEditorModal from "@components/features/media/ImageEditorModal";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 
@@ -29,7 +29,6 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validation (Image only)
     if (!file.type.startsWith("image/")) {
       alert("Please upload a valid image file.");
       return;
@@ -41,7 +40,6 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
       setIsEditorOpen(true);
     };
     reader.readAsDataURL(file);
-    // Reset file input value so same file can be re-selected
     e.target.value = "";
   };
 
@@ -62,7 +60,6 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
       setUploadProgress(90);
       setAvatar(data.avatar);
       
-      // Update local storage
       const updatedUser = { ...currentUser, avatar: data.avatar };
       localStorage.setItem("userInfo", JSON.stringify(updatedUser));
       setCurrentUser?.(updatedUser);
@@ -84,7 +81,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
     if (!confirm("Are you sure you want to remove your profile picture?")) return;
     setLoading(true);
     try {
-      const { data } = await api.delete("/user/avatar");
+      await api.delete("/user/avatar");
       setAvatar("");
       const updatedUser = { ...currentUser, avatar: "" };
       localStorage.setItem("userInfo", JSON.stringify(updatedUser));
@@ -153,23 +150,23 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
   };
 
   return (
-    <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0">
+    <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none animate-slide-in">
       {/* HEADER */}
-      <div className="h-[108px] bg-app-header border-b border-app-border flex items-end p-5 pb-4 gap-6">
+      <div className="h-[60px] bg-app-header border-b border-app-border flex items-center p-4 gap-4 shrink-0">
         <button
           onClick={onClose}
-          className="p-1 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer"
+          className="p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
         </button>
-        <span className="text-app-text-primary font-semibold text-lg pb-[2px]">Profile</span>
+        <span className="text-app-text-primary font-semibold text-lg animate-fade-in">Profile</span>
       </div>
 
       {/* BODY */}
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center gap-8">
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center gap-6 pb-12">
         
         {/* AVATAR SYSTEM */}
-        <div className="relative group w-40 h-40 rounded-full overflow-hidden flex items-center justify-center cursor-pointer bg-brand border-2 border-dashed border-app-border hover:border-brand transition-all">
+        <div className="relative group w-32 h-32 rounded-full overflow-hidden flex items-center justify-center cursor-pointer bg-brand border-2 border-dashed border-app-border/80 hover:border-brand transition-all shadow-md shrink-0">
           {avatar ? (
             <img
               src={avatar}
@@ -177,7 +174,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
               className="w-full h-full object-cover group-hover:opacity-40 transition-opacity"
             />
           ) : (
-            <span className="text-white text-5xl font-bold group-hover:opacity-40 transition-opacity">
+            <span className="text-white text-4xl font-bold group-hover:opacity-40 transition-opacity">
               {getInitials(username)}
             </span>
           )}
@@ -187,8 +184,8 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
             onClick={() => fileInputRef.current?.click()}
             className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity gap-1 text-center px-2"
           >
-            <Camera size={26} className="text-white" />
-            <span className="text-[10px] text-white uppercase font-bold tracking-wider">
+            <Camera size={22} className="text-white" />
+            <span className="text-[9px] text-white uppercase font-bold tracking-wider">
               Change Photo
             </span>
           </div>
@@ -196,9 +193,9 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
           {/* LOADING COVER */}
           {loading && (
             <div className="absolute inset-0 bg-app-header/80 flex flex-col items-center justify-center gap-2">
-              <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
               {uploadProgress > 0 && (
-                <span className="text-xs text-white font-semibold">{uploadProgress}%</span>
+                <span className="text-[10px] text-white font-bold">{uploadProgress}%</span>
               )}
             </div>
           )}
@@ -208,7 +205,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
         {avatar && !loading && (
           <button
             onClick={handleRemoveAvatar}
-            className="text-red-400 hover:text-red-300 text-xs font-semibold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-full transition cursor-pointer"
+            className="text-red-400 hover:text-red-300 text-[10px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 px-3.5 py-1.5 rounded-full transition cursor-pointer"
           >
             Remove Photo
           </button>
@@ -223,27 +220,30 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
         />
 
         {/* PROFILE USERNAME */}
-        <div className="w-full bg-app-header rounded-lg p-4 border border-app-border">
-          <span className="text-xs text-brand uppercase font-bold tracking-wider">
-            Your Name
-          </span>
+        <div className="w-full bg-app-header/40 rounded-2xl p-4.5 border border-app-border/80 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-brand">
+            <User size={13} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              Your Name
+            </span>
+          </div>
 
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between">
             {isEditingName ? (
-              <div className="flex items-center w-full gap-2 border-b border-brand pb-1">
+              <div className="flex items-center w-full gap-2 border-b border-brand pb-1 mt-1">
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   maxLength={25}
-                  className="bg-transparent text-app-text-primary font-medium outline-none w-full text-base"
+                  className="bg-transparent text-app-text-primary font-semibold outline-none w-full text-sm py-0.5"
                   autoFocus
                 />
                 <button
                   onClick={handleSaveUsername}
                   className="text-app-text-secondary hover:text-app-text-primary transition cursor-pointer"
                 >
-                  <Check size={20} className="text-brand" />
+                  <Check size={18} className="text-brand" />
                 </button>
                 <button
                   onClick={() => {
@@ -252,17 +252,17 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
                   }}
                   className="text-app-text-secondary hover:text-app-text-primary transition cursor-pointer"
                 >
-                  <X size={20} className="text-red-400" />
+                  <X size={18} className="text-red-400" />
                 </button>
               </div>
             ) : (
               <>
-                <span className="text-app-text-primary font-medium text-base">{username}</span>
+                <span className="text-app-text-primary font-semibold text-sm mt-1">{username}</span>
                 <button
                   onClick={() => setIsEditingName(true)}
                   className="text-app-text-secondary hover:text-app-text-primary p-1 hover:bg-app-hover rounded-full transition cursor-pointer"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={13} />
                 </button>
               </>
             )}
@@ -270,27 +270,30 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
         </div>
 
         {/* PROFILE ABOUT / BIO STATUS */}
-        <div className="w-full bg-app-header rounded-lg p-4 border border-app-border">
-          <span className="text-xs text-brand uppercase font-bold tracking-wider">
-            About
-          </span>
+        <div className="w-full bg-app-header/40 rounded-2xl p-4.5 border border-app-border/80 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-brand">
+            <Info size={13} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              About
+            </span>
+          </div>
 
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between">
             {isEditingStatus ? (
-              <div className="flex items-center w-full gap-2 border-b border-brand pb-1">
+              <div className="flex items-center w-full gap-2 border-b border-brand pb-1 mt-1">
                 <input
                   type="text"
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   maxLength={100}
-                  className="bg-transparent text-app-text-primary font-medium outline-none w-full text-base"
+                  className="bg-transparent text-app-text-primary font-semibold outline-none w-full text-sm py-0.5"
                   autoFocus
                 />
                 <button
                   onClick={handleSaveStatus}
                   className="text-app-text-secondary hover:text-app-text-primary transition cursor-pointer"
                 >
-                  <Check size={20} className="text-brand" />
+                  <Check size={18} className="text-brand" />
                 </button>
                 <button
                   onClick={() => {
@@ -299,17 +302,17 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
                   }}
                   className="text-app-text-secondary hover:text-app-text-primary transition cursor-pointer"
                 >
-                  <X size={20} className="text-red-400" />
+                  <X size={18} className="text-red-400" />
                 </button>
               </div>
             ) : (
               <>
-                <span className="text-app-text-primary font-medium text-base leading-relaxed break-words max-w-[85%]">{status}</span>
+                <span className="text-app-text-primary font-medium text-xs leading-relaxed break-words max-w-[85%] mt-1">{status}</span>
                 <button
                   onClick={() => setIsEditingStatus(true)}
                   className="text-app-text-secondary hover:text-app-text-primary p-1 hover:bg-app-hover rounded-full transition cursor-pointer"
                 >
-                  <Edit2 size={16} />
+                  <Edit2 size={13} />
                 </button>
               </>
             )}
@@ -317,18 +320,19 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
         </div>
 
         {/* INFO FOOTER */}
-        <div className="text-xs text-app-text-secondary text-center px-4 leading-relaxed mt-auto">
-          This is not your username or pin. This name will be visible to your Vertex Connect contacts.
+        <div className="text-[10px] text-app-text-secondary text-center px-4 leading-relaxed mt-auto max-w-[280px]">
+          This is not your pin. This name and status bio will be visible to your mutual followers in Vertex Connect.
         </div>
 
-        {/* CROP/FILTER IMAGE EDITOR MODAL */}
+      </div>
+      {isEditorOpen && (
         <ImageEditorModal
           isOpen={isEditorOpen}
           onClose={() => setIsEditorOpen(false)}
           imageSrc={selectedImageSrc}
           onSave={handleSaveCrop}
         />
-      </div>
+      )}
     </div>
   );
 }

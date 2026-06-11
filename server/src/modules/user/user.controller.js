@@ -13,10 +13,6 @@ const uploadAvatarToCloudinary = (file) => {
       {
         folder: "vertex-connect/avatars",
         resource_type: "image",
-        width: 500,
-        height: 500,
-        crop: "fill",
-        gravity: "face",
         quality: "auto",
         fetch_format: "auto",
       },
@@ -154,6 +150,8 @@ const updateAvatar = async (req, res) => {
       userId: req.user._id,
       username: updatedUser.username,
       avatar: updatedUser.avatar,
+      status: updatedUser.status,
+      about: updatedUser.about,
     });
 
     res.status(200).json(updatedUser);
@@ -191,6 +189,8 @@ const removeAvatar = async (req, res) => {
       userId: req.user._id,
       username: updatedUser.username,
       avatar: "",
+      status: updatedUser.status,
+      about: updatedUser.about,
     });
 
     res.status(200).json(updatedUser);

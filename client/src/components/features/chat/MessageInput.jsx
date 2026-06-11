@@ -421,7 +421,6 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
       {selectedFiles.length > 0 && (
         <MediaPreviewModal
           files={selectedFiles}
-          uploading={uploadingFile}
           onClose={() => setSelectedFiles([])}
           onSend={(files, caption) => uploadAndSendFiles(files, caption)}
         />

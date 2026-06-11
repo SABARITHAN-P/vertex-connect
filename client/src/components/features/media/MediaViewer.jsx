@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { X, ZoomIn, ZoomOut, Download, ArrowLeft, ArrowRight, RefreshCw, User, Calendar } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { X, ZoomIn, ZoomOut, Download, ArrowLeft, ArrowRight, RefreshCw, User } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 
 function MediaViewer({ isOpen, onClose, initialMedia, mediaList = [] }) {
+  const [prevInitialMedia, setPrevInitialMedia] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -10,30 +11,36 @@ function MediaViewer({ isOpen, onClose, initialMedia, mediaList = [] }) {
   const dragStart = useRef({ x: 0, y: 0 });
   const viewerRef = useRef(null);
 
+  // Synchronize state during render when initialMedia changes
+  if (initialMedia !== prevInitialMedia) {
+    setPrevInitialMedia(initialMedia);
+    const idx = mediaList.length > 0 ? mediaList.findIndex((item) => item.url === initialMedia?.url) : -1;
+    setCurrentIndex(idx !== -1 ? idx : -1);
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }
+
   // Centralized ESC key support
   useEscapeKey(onClose, isOpen, 100);
 
-  // Synchronize index when media is opened
-  useEffect(() => {
-    if (initialMedia && mediaList.length > 0) {
-      const idx = mediaList.findIndex((item) => item.url === initialMedia.url);
-      if (idx !== -1) {
-        setCurrentIndex(idx);
-      }
-    } else if (initialMedia) {
-      // Fallback if mediaList is not provided
-      setCurrentIndex(-1);
-    }
-    // Reset zoom
-    resetZoom();
-  }, [initialMedia, mediaList]);
-
   const activeMedia = currentIndex !== -1 && mediaList[currentIndex] ? mediaList[currentIndex] : initialMedia;
 
-  const resetZoom = () => {
+  const resetZoom = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
-  };
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (mediaList.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % mediaList.length);
+    resetZoom();
+  }, [mediaList.length, resetZoom]);
+
+  const handlePrev = useCallback(() => {
+    if (mediaList.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + mediaList.length) % mediaList.length);
+    resetZoom();
+  }, [mediaList.length, resetZoom]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -47,19 +54,7 @@ function MediaViewer({ isOpen, onClose, initialMedia, mediaList = [] }) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, currentIndex, mediaList]);
-
-  const handleNext = () => {
-    if (mediaList.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % mediaList.length);
-    resetZoom();
-  };
-
-  const handlePrev = () => {
-    if (mediaList.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + mediaList.length) % mediaList.length);
-    resetZoom();
-  };
+  }, [isOpen, mediaList, handleNext, handlePrev]);
 
   // Zoom controls
   const handleZoomIn = () => {
@@ -110,12 +105,15 @@ function MediaViewer({ isOpen, onClose, initialMedia, mediaList = [] }) {
       const link = document.createElement("a");
       link.href = blobUrl;
       const extension = activeMedia.type === "video" ? "mp4" : "jpg";
-      link.download = `vertex_media_${Date.now()}.${extension}`;
+      // Use original file name if available, otherwise generate one
+      const fileName = activeMedia.fileName || `vertex_media_${Date.now()}.${extension}`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
+      console.error("Failed to download media file directly:", error);
       // Direct opening tab fallback if CORS blocking direct blob fetch
       window.open(activeMedia.url, "_blank");
     }
