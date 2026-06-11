@@ -1,0 +1,236 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-sidebar: #f4f4f5;
+  /* zinc-100 */
+  --bg-sidebar-rail: #e4e4e7;
+  /* zinc-200 */
+  --bg-header: #ffffff;
+  --bg-chat: #ffffff;
+  --bg-hover: #e4e4e7;
+  /* zinc-200 */
+  --bg-card: #ffffff;
+  --border-color: #e4e4e7;
+  --text-primary: #09090b;
+  /* zinc-950 */
+  --text-secondary: #71717a;
+  /* zinc-500 */
+  --bubble-incoming: #f1f5f9;
+  /* Slate 100 - very soft slate */
+
+  /* Premium Teal & Soft Green theme for Light Mode (no harsh blue) */
+  --brand-color: #0f766e;
+  /* Teal-700: sophisticated, premium organic teal/green */
+  --bubble-outgoing: #d9fdd3;
+  /* Soft green for excellent readability */
+  --text-outgoing: #111b21;
+  /* Dark green-black for high contrast text */
+  --read-receipt: #00bfa5;
+  /* Teal receipt checkmarks */
+
+  --bg-input: #f4f4f5;
+  --bg-active: #e4e4e7;
+  --text-inverse: #ffffff;
+  --bg-drawer: #ffffff;
+  --bg-modal: #ffffff;
+}
+
+.dark {
+  --bg-sidebar: #17212b;
+  /* Deep Slate Blue (Telegram style) */
+  --bg-sidebar-rail: #0e1621;
+  /* Midnight Blue (Telegram style) */
+  --bg-header: #17212b;
+  /* Deep Slate Blue */
+  --bg-chat: #0e1621;
+  /* Midnight Blue */
+  --bg-hover: #202b36;
+  /* Sleek hover */
+  --bg-card: #17212b;
+  --border-color: #101921;
+  /* Slate-charcoal border line */
+  --text-primary: #f5f6f7;
+  /* Bright slate-white text */
+  --text-secondary: #7f91a4;
+  /* Muted slate blue secondary text */
+  --bubble-incoming: #182533;
+  /* Slate Blue incoming bubble */
+
+  /* Medium Slate Blue/Indigo accents for Dark Mode */
+  --brand-color: #2b5278;
+  --bubble-outgoing: #2b5278;
+  --text-outgoing: #ffffff;
+  --read-receipt: #4fc3f7;
+
+  --bg-input: #17212b;
+  --bg-active: #24303f;
+  /* Active state */
+  --text-inverse: #ffffff;
+  --bg-drawer: #17212b;
+  --bg-modal: #17212b;
+}
+
+@theme {
+  --color-brand: var(--brand-color);
+  --color-app-sidebar: var(--bg-sidebar);
+  --color-app-sidebar-rail: var(--bg-sidebar-rail);
+  --color-app-header: var(--bg-header);
+  --color-app-chat: var(--bg-chat);
+  --color-app-hover: var(--bg-hover);
+  --color-app-card: var(--bg-card);
+  --color-app-border: var(--border-color);
+  --color-app-text-primary: var(--text-primary);
+  --color-app-text-secondary: var(--text-secondary);
+  --color-app-bubble-incoming: var(--bubble-incoming);
+  --color-app-bubble-outgoing: var(--bubble-outgoing);
+  --color-app-bubble-outgoing-text: var(--text-outgoing);
+  --color-app-read-receipt: var(--read-receipt);
+  --color-app-input: var(--bg-input);
+  --color-app-active: var(--bg-active);
+  --color-app-text-inverse: var(--text-inverse);
+  --color-app-drawer: var(--bg-drawer);
+  --color-app-modal: var(--bg-modal);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.4);
+}
+
+/* Muted WhatsApp doodle pattern */
+.whatsapp-pattern {
+  position: absolute;
+  inset: 0;
+}
+
+.whatsapp-pattern::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('/whatsapp-bg.png');
+  background-repeat: repeat;
+  background-size: 380px;
+  pointer-events: none;
+  /* Light Mode blending: black bg -> white (invisible under multiply), white lines -> black */
+  filter: invert(1);
+  mix-blend-mode: multiply;
+  opacity: 0.15;
+}
+
+.dark .whatsapp-pattern::before {
+  /* Dark Mode blending: black bg (invisible under screen), white lines -> white */
+  filter: none;
+  mix-blend-mode: screen;
+  opacity: 0.08;
+}
+
+/* =========================================================
+   DYNAMIC GENERAL SETTINGS (FONT SIZE, STYLE, COMPACT MODE)
+   ========================================================= */
+
+/* Font Size Classes */
+.text-sz-small {
+  font-size: 0.825rem !important;
+  /* ~13px scale */
+}
+
+.text-sz-medium {
+  font-size: 0.9375rem !important;
+  /* ~15px scale */
+}
+
+.text-sz-large {
+  font-size: 1.0625rem !important;
+  /* ~17px scale */
+}
+
+/* Specific text scaling */
+.text-sz-small .message-text-bubble,
+.text-sz-small .chat-message-text {
+  font-size: 0.8rem !important;
+}
+
+.text-sz-medium .message-text-bubble,
+.text-sz-medium .chat-message-text {
+  font-size: 0.92rem !important;
+}
+
+.text-sz-large .message-text-bubble,
+.text-sz-large .chat-message-text {
+  font-size: 1.08rem !important;
+}
+
+/* Font Style Overrides */
+.font-st-system {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.font-st-sans {
+  font-family: "Outfit", "Inter", sans-serif !important;
+}
+
+.font-st-serif {
+  font-family: "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+.font-st-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+
+.font-st-fredoka {
+  font-family: "Fredoka", sans-serif !important;
+}
+
+.font-st-orbitron {
+  font-family: "Orbitron", sans-serif !important;
+  letter-spacing: 0.03em !important;
+}
+
+.font-st-caveat {
+  font-family: "Caveat", cursive !important;
+  font-size: 1.15em !important;
+}
+
+.font-st-cinzel {
+  font-family: "Cinzel", serif !important;
+}
+
+.font-st-dancing {
+  font-family: "Dancing Script", cursive !important;
+  font-size: 1.12em !important;
+}
+
+/* Compact Sidebar & Chat Layout Options */
+.compact-layout .chat-item-card {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  margin-top: 0.125rem !important;
+  margin-bottom: 0.125rem !important;
+}
+
+.compact-layout .message-bubble-padding {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+  padding-left: 0.6rem !important;
+  padding-right: 0.6rem !important;
+}
+
+.compact-layout .chat-list-container {
+  gap: 1px !important;
+}
