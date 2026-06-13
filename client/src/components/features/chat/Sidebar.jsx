@@ -5,7 +5,7 @@ import CreateGroupModal from "@components/features/group/CreateGroupModal";
 import ProfileSettingsDrawer from "@components/features/settings/ProfileSettingsDrawer";
 import SettingsDrawer from "@components/features/settings/SettingsDrawer";
 import FollowRequestsDrawer from "@components/features/social/FollowRequestsDrawer";
-import { Search, Users, Pin, Archive, Lock, CheckCheck, Ban, Eraser, Trash2, ArrowLeft, UserCheck, Phone, Sparkles, Pencil, MessageSquare, Plus, Sun, Moon, Settings, UserPlus, X } from "lucide-react";
+import { Search, Users, Pin, PinOff, Archive, ArchiveRestore, Lock, Unlock, CheckCheck, MailOpen, Mail, UserX, Eraser, Trash2, ArrowLeft, UserCheck, Phone, Sparkles, Pencil, MessageSquare, Plus, Sun, Moon, Settings, UserPlus, X } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import CallsDrawer from "@components/features/calls/CallsDrawer";
 import toast from "react-hot-toast";
@@ -1142,154 +1142,215 @@ function Sidebar({
       {/* FLOATING CUSTOM CONTEXT MENU */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-[#233138] border border-[#374248] rounded-lg py-1.5 shadow-2xl text-gray-200 text-sm w-48 transition-all duration-100 ease-out select-none"
+          className="fixed z-50 bg-app-card/95 backdrop-blur-md border border-app-border/80 rounded-xl p-1 shadow-2xl w-48 transition-all duration-100 ease-out select-none"
           style={{
-            top: `${Math.min(contextMenu.y, window.innerHeight - 280)}px`,
+            top: `${Math.min(contextMenu.y, window.innerHeight - 270)}px`,
             left: `${Math.min(contextMenu.x, window.innerWidth - 200)}px`,
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Pin / Unpin Chat */}
-          <button
-            onClick={() => handlePinChat(contextMenu.chat)}
-            className="w-full text-left px-4 py-2 hover:bg-app-hover transition-colors flex items-center gap-3 text-app-text-primary cursor-pointer"
-          >
-            <Pin size={16} className="text-brand rotate-45 shrink-0" />
-            <span>
-              {contextMenu.chat.pinnedBy?.some(p => p.user.toString() === currentUserId) || pinnedChatIds.includes(contextMenu.chat._id)
-                ? "Unpin Chat"
-                : "Pin Chat"}
-            </span>
-          </button>
+          {/* Section 1: General Actions */}
+          <div className="space-y-0.5">
+            {/* Pin / Unpin Chat */}
+            {(() => {
+              const isPinned = contextMenu.chat.pinnedBy?.some(p => p.user.toString() === currentUserId) || pinnedChatIds.includes(contextMenu.chat._id);
+              return (
+                <button
+                  onClick={() => handlePinChat(contextMenu.chat)}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    {isPinned ? <PinOff size={13} /> : <Pin size={13} className="rotate-45" />}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {isPinned ? "Unpin Chat" : "Pin Chat"}
+                  </span>
+                </button>
+              );
+            })()}
 
-          {/* Archive / Unarchive Chat */}
-          <button
-            onClick={() => handleArchiveChat(contextMenu.chat)}
-            className="w-full text-left px-4 py-2 hover:bg-app-hover transition-colors flex items-center gap-3 text-app-text-primary cursor-pointer"
-          >
-            <Archive size={16} className="text-brand shrink-0" />
-            <span>
-              {contextMenu.chat.archivedBy?.some(a => a.user.toString() === currentUserId)
-                ? "Unarchive Chat"
-                : "Archive Chat"}
-            </span>
-          </button>
+            {/* Archive / Unarchive Chat */}
+            {(() => {
+              const isArchived = contextMenu.chat.archivedBy?.some(a => a.user.toString() === currentUserId);
+              return (
+                <button
+                  onClick={() => handleArchiveChat(contextMenu.chat)}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                    {isArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {isArchived ? "Unarchive Chat" : "Archive Chat"}
+                  </span>
+                </button>
+              );
+            })()}
 
-          {/* Lock / Unlock Chat */}
-          <button
-            onClick={() => {
+            {/* Lock / Unlock Chat */}
+            {(() => {
               const isLocked = contextMenu.chat.lockedBy?.some(l => l.user.toString() === currentUserId);
-              handleLockUnlockClick(contextMenu.chat, isLocked ? "unlock" : "lock");
-            }}
-            className="w-full text-left px-4 py-2 hover:bg-app-hover transition-colors flex items-center gap-3 text-app-text-primary cursor-pointer"
-          >
-            <Lock size={16} className="text-brand shrink-0" />
-            <span>
-              {contextMenu.chat.lockedBy?.some(l => l.user.toString() === currentUserId)
-                ? "Unlock Chat"
-                : "Lock Chat"}
-            </span>
-          </button>
+              return (
+                <button
+                  onClick={() => handleLockUnlockClick(contextMenu.chat, isLocked ? "unlock" : "lock")}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    {isLocked ? <Unlock size={13} /> : <Lock size={13} />}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {isLocked ? "Unlock Chat" : "Lock Chat"}
+                  </span>
+                </button>
+              );
+            })()}
 
-          {/* Mark as Read / Unread */}
-          <button
-            onClick={() => handleToggleMarkUnread(contextMenu.chat)}
-            className="w-full text-left px-4 py-2 hover:bg-app-hover transition-colors flex items-center gap-3 text-app-text-primary cursor-pointer"
-          >
-            <CheckCheck size={16} className="text-brand shrink-0" />
-            <span>
-              {contextMenu.chat.markedUnreadBy?.some(u => u.user.toString() === currentUserId)
-                ? "Mark as Read"
-                : "Mark as Unread"}
-            </span>
-          </button>
+            {/* Mark as Read / Unread */}
+            {(() => {
+              const isMarkedUnread = contextMenu.chat.markedUnreadBy?.some(u => u.user.toString() === currentUserId);
+              return (
+                <button
+                  onClick={() => handleToggleMarkUnread(contextMenu.chat)}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    {isMarkedUnread ? <MailOpen size={13} /> : <Mail size={13} />}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {isMarkedUnread ? "Mark as Read" : "Mark as Unread"}
+                  </span>
+                </button>
+              );
+            })()}
+          </div>
 
-          {/* Block / Unblock User (1-to-1 only) */}
-          {!contextMenu.chat.isGroupChat && (
+          {/* Section 2: Block / Unblock User (1-to-1 only) */}
+          {!contextMenu.chat.isGroupChat && (() => {
+            const otherUser = contextMenu.chat.participants.find((p) => p._id !== currentUserId);
+            const isBlocked = currentUser.blockedUsers?.some(
+              (id) => id.toString() === otherUser?._id.toString()
+            );
+            return (
+              <div className="border-t border-app-border/40 my-0.5 pt-0.5 space-y-0.5">
+                <button
+                  onClick={() => handleToggleBlockUser(contextMenu.chat)}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                >
+                  <div className={`flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${isBlocked ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"}`}>
+                    {isBlocked ? <UserCheck size={13} /> : <UserX size={13} />}
+                  </div>
+                  <span className="font-medium text-xs">
+                    {isBlocked ? "Unblock User" : "Block User"}
+                  </span>
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Section 3: Destructive Actions */}
+          <div className="border-t border-app-border/40 my-0.5 pt-0.5 space-y-0.5">
+            {/* Clear Chat */}
             <button
-              onClick={() => handleToggleBlockUser(contextMenu.chat)}
-              className="w-full text-left px-4 py-2 hover:bg-app-hover transition-colors flex items-center gap-3 border-t border-app-border mt-1 pt-1.5 text-app-text-primary cursor-pointer"
+              onClick={() => {
+                setContextMenu(null);
+                handleClearChat(contextMenu.chat);
+              }}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
             >
-              <Ban size={16} className="text-amber-500 shrink-0" />
-              <span>
-                {currentUser.blockedUsers?.some(
-                  (id) =>
-                    id.toString() ===
-                    contextMenu.chat.participants.find((p) => p._id !== currentUserId)?._id.toString()
-                )
-                  ? "Unblock User"
-                  : "Block User"}
-              </span>
+              <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Eraser size={13} />
+              </div>
+              <span className="font-medium text-xs">Clear Chat</span>
             </button>
-          )}
 
-          {/* Clear Chat */}
-          <button
-            onClick={() => {
-              setContextMenu(null);
-              handleClearChat(contextMenu.chat);
-            }}
-            className="w-full text-left px-4 py-2 hover:bg-app-hover text-amber-500 transition-colors flex items-center gap-3 border-t border-app-border mt-1 pt-1.5 cursor-pointer"
-          >
-            <Eraser size={16} className="text-amber-500 shrink-0" />
-            <span>Clear Chat</span>
-          </button>
-
-          {/* Delete Chat */}
-          <button
-            onClick={() => {
-              setContextMenu(null);
-              handleDeleteChat(contextMenu.chat);
-            }}
-            className="w-full text-left px-4 py-2 hover:bg-app-hover text-red-500 font-semibold border-t border-app-border mt-1 pt-2 transition-colors flex items-center gap-3 cursor-pointer"
-          >
-            <Trash2 size={16} className="text-red-500 shrink-0" />
-            <span>Delete Chat</span>
-          </button>
+            {/* Delete Chat */}
+            <button
+              onClick={() => {
+                setContextMenu(null);
+                handleDeleteChat(contextMenu.chat);
+              }}
+              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/5 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2.5 text-red-500 dark:text-red-400 cursor-pointer"
+            >
+              <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-red-500/10 text-red-600 dark:text-red-400">
+                <Trash2 size={13} />
+              </div>
+              <span className="font-semibold text-xs">Delete Chat</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* SECURE PASSCODE PIN MODAL */}
       {passcodePrompt && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 backdrop-blur-md">
-          <div className="bg-app-modal border border-app-border rounded-2xl w-[90%] max-w-sm p-6 shadow-2xl text-center flex flex-col items-center">
-            <Lock size={36} className="text-brand mb-3 animate-pulse" />
-            <h3 className="text-lg font-semibold text-app-text-primary mt-1 mb-2">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-app-card/95 backdrop-blur-xl border border-app-border/80 rounded-3xl w-[90%] max-w-sm p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] text-center flex flex-col items-center">
+            {/* Animated Ring Lock Icon Container */}
+            <div className="w-14 h-14 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand mb-4 ring-8 ring-brand/5 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+              <Lock size={22} className="text-brand animate-pulse" />
+            </div>
+
+            <h3 className="text-lg font-bold text-app-text-primary mt-1 mb-2 tracking-tight">
               {passcodePrompt.type === "lock"
                 ? "Set Chat Lock Passcode"
                 : passcodePrompt.type === "unlock"
                 ? "Unlock Locked Chat"
                 : "Unlock Locked Chats Folder"}
             </h3>
-            <p className="text-xs text-app-text-secondary mb-6">
+            <p className="text-xs text-app-text-secondary mb-6 leading-relaxed max-w-[250px]">
               {passcodePrompt.type === "lock"
                 ? "Create a 4-digit security PIN to restrict access to this conversation."
                 : "Enter your 4-digit security PIN to continue."}
             </p>
             
+            {/* Hidden Input to capture user typing */}
             <input
+              id="passcode-hidden-input"
               type="password"
               maxLength={4}
               value={passcodeValue}
               onChange={(e) => setPasscodeValue(e.target.value.replace(/\D/g, ""))}
-              placeholder="••••"
-              className="w-32 bg-app-input border border-app-border rounded-xl px-4 py-3 text-center text-app-text-primary text-2xl font-bold tracking-widest outline-none mb-6 focus:border-brand transition"
+              className="opacity-0 absolute pointer-events-none w-0 h-0"
               autoFocus
             />
+
+            {/* Visual 4-Digit Passcode Display */}
+            <div 
+              className="flex justify-center gap-3.5 mb-8 cursor-pointer select-none" 
+              onClick={() => document.getElementById("passcode-hidden-input")?.focus()}
+            >
+              {[0, 1, 2, 3].map((index) => {
+                const char = passcodeValue[index];
+                const isActive = passcodeValue.length === index;
+                return (
+                  <div
+                    key={index}
+                    className={`w-12 h-14 rounded-xl border flex items-center justify-center text-2xl font-bold transition-all duration-200 ${
+                      char
+                        ? "border-brand text-brand bg-brand/5 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                        : isActive
+                        ? "border-brand/80 bg-app-input scale-105 shadow-[0_0_8px_rgba(99,102,241,0.1)]"
+                        : "border-app-border bg-app-input"
+                    }`}
+                  >
+                    {char ? "•" : ""}
+                  </div>
+                );
+              })}
+            </div>
             
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-center gap-3 w-full">
               <button
                 onClick={() => {
                   setPasscodePrompt(null);
                   setPasscodeValue("");
                 }}
-                className="px-4 py-2 rounded-xl bg-transparent border border-app-border text-app-text-secondary hover:bg-app-hover transition-all text-xs font-semibold"
+                className="flex-1 py-2.5 rounded-xl bg-transparent border border-app-border text-app-text-primary hover:bg-app-hover transition-all text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleVerifyPasscode}
-                className="px-6 py-2 rounded-xl bg-brand hover:bg-brand/80 text-white font-bold transition-all text-xs shadow-md"
+                className="flex-1 py-2.5 rounded-xl bg-brand hover:bg-brand/80 text-white font-bold transition-all text-xs shadow-lg shadow-brand/10 cursor-pointer"
               >
                 Confirm
               </button>

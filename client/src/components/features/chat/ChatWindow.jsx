@@ -404,8 +404,6 @@ function ChatWindow({
           });
           await api.patch(`/message/read/${selectedUser.chatId}`);
           setUnreadCounts((prev) => ({ ...prev, [incomingChatId]: 0 }));
-        } else {
-          setUnreadCounts((prev) => ({ ...prev, [incomingChatId]: (prev[incomingChatId] || 0) + 1 }));
         }
       } catch (error) {
         console.log(error);

@@ -14,13 +14,11 @@ const swalCustomClass = {
  * Premium replacement for standard window.alert
  * @param {string} title - The title of the alert
  * @param {string} text - The detail message of the alert
- * @param {"success"|"error"|"warning"|"info"|"question"} icon - The type of icon to display
  */
-export const premiumAlert = (title, text = "", icon = "info") => {
+export const premiumAlert = (title, text = "") => {
   return Swal.fire({
     title,
     text,
-    icon,
     background: "var(--bg-modal)",
     color: "var(--text-primary)",
     buttonsStyling: false,
@@ -32,14 +30,12 @@ export const premiumAlert = (title, text = "", icon = "info") => {
  * Premium replacement for standard window.confirm
  * @param {string} title - The confirmation title
  * @param {string} text - The detail message
- * @param {"success"|"error"|"warning"|"info"|"question"} icon - Icon type
  * @returns {Promise<boolean>} Resolves to true if confirmed, false otherwise
  */
-export const premiumConfirm = (title, text = "", icon = "warning") => {
+export const premiumConfirm = (title, text = "") => {
   return Swal.fire({
     title,
     text,
-    icon,
     showCancelButton: true,
     confirmButtonText: "Confirm",
     cancelButtonText: "Cancel",
