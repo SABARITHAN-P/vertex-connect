@@ -68,7 +68,7 @@ export default function MarkdownRenderer({ content }) {
     if (!content) return null;
 
     // Regular expression to identify code blocks: ```lang\ncode\n```
-    const parts = content.split(/(\`\`\`[a-zA-Z0-9#\-\+]*\n[\s\S]*?\n\`\`\`)/g);
+    const parts = content.split(/(```[a-zA-Z0-9#\-+]*\n[\s\S]*?\n```)/g);
 
     return parts.map((part, index) => {
       // Check if this part is a code block
@@ -108,7 +108,7 @@ export default function MarkdownRenderer({ content }) {
         }
       }
     });
-  }, [content]);
+  }, [content, theme]);
 
   return <div className="markdown-body space-y-2">{renderedContent}</div>;
 }

@@ -21,7 +21,7 @@ function CreateGroupModal({ onClose, onGroupCreated }) {
   // Centralized ESC key support: active only when nested editor is not open
   useEscapeKey(onClose, !isEditorOpen, 10);
 
-  const currentUser = JSON.parse(localStorage.getItem("userInfo"));
+
 
   useEffect(() => {
     const fetchUsers = async () => {

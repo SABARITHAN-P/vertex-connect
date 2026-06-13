@@ -1,12 +1,12 @@
 import { useTheme } from "@context/ThemeContext";
 import EmojiPicker, { Theme, EmojiStyle } from "emoji-picker-react";
 
-function MediaPanel({ onEmojiSelect, onClose }) {
+function MediaPanel({ onEmojiSelect }) {
   const { theme } = useTheme();
   const pickerTheme = theme === "light" ? Theme.LIGHT : Theme.DARK;
 
   return (
-    <div className="relative h-[380px] w-[320px] md:w-[360px] rounded-2xl overflow-hidden animate-fade-in select-none emoji-picker-wrapper">
+    <div className="relative h-[380px] w-[calc(100vw-32px)] sm:w-[320px] md:w-[360px] rounded-2xl overflow-hidden animate-fade-in select-none emoji-picker-wrapper">
       <style dangerouslySetInnerHTML={{ __html: `
         .emoji-picker-wrapper .EmojiPickerReact {
           --epr-bg-color: var(--bg-modal, #17212b) !important;

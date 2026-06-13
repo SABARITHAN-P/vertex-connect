@@ -23,6 +23,11 @@ function MediaPreviewModal({ files = [], onClose, onSend, uploading }) {
 
   const [editingIndex, setEditingIndex] = useState(null);
 
+  const handleSend = useCallback(() => {
+    const finalFiles = previewFiles.map((item) => item.file);
+    onSend(finalFiles, caption);
+  }, [previewFiles, onSend, caption]);
+
   // Centralized ESC handling: priority 20 when editing (resets editing), priority 15 when not editing (closes modal)
   useEscapeKey(() => {
     setEditingIndex(null);
@@ -79,7 +84,7 @@ function MediaPreviewModal({ files = [], onClose, onSend, uploading }) {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [previewFiles, editingIndex, caption]);
+  }, [editingIndex, handleSend]);
 
   useEffect(() => {
     if (!files.length) return;
@@ -98,9 +103,12 @@ function MediaPreviewModal({ files = [], onClose, onSend, uploading }) {
             : "file",
     }));
 
-    setPreviewFiles(previews);
+    const handle = requestAnimationFrame(() => {
+      setPreviewFiles(previews);
+    });
 
     return () => {
+      cancelAnimationFrame(handle);
       previews.forEach((item) => URL.revokeObjectURL(item.previewUrl));
     };
   }, [files]);
@@ -335,16 +343,6 @@ function MediaPreviewModal({ files = [], onClose, onSend, uploading }) {
     } catch (err) {
       console.log(err);
     }
-  };
-
-  /* =========================
-     SEND
-  ========================== */
-
-  const handleSend = () => {
-    const finalFiles = previewFiles.map((item) => item.file);
-
-    onSend(finalFiles, caption);
   };
 
   if (!previewFiles.length) return null;

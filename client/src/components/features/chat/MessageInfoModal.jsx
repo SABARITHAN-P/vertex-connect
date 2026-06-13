@@ -1,4 +1,4 @@
-import { X, Check, CheckCheck, Clock, Eye, Info } from "lucide-react";
+import { X, CheckCheck, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import api from "@services/api";
 import { socket } from "@socket/socket";
@@ -70,7 +70,7 @@ function MessageInfoModal({ isOpen, onClose, messageId, isGroup, chatParticipant
 
   const renderMessagePreview = () => {
     if (!messageInfo) return null;
-    const { content, messageType, media = [], mediaUrl } = messageInfo;
+    const { content, messageType } = messageInfo;
 
     return (
       <div className="bg-app-input border border-app-border rounded-xl p-3 mb-4 flex flex-col gap-1.5 shadow-inner">

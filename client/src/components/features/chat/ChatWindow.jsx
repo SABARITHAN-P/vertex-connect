@@ -10,7 +10,7 @@ import { playReceivedSound } from "@utils/soundHelper";
 import GroupDetailsDrawer from "@components/features/group/GroupDetailsDrawer";
 import MediaViewer from "@components/features/media/MediaViewer";
 import { socket } from "@socket/socket";
-import { Phone, Video, MoreVertical, Search, X, ChevronUp, ChevronDown, Lock, Ban, Users, User, Info, Trash2, BellOff, LogOut, FolderOpen, UserPlus } from "lucide-react";
+import { Phone, Video, MoreVertical, Search, X, ChevronUp, ChevronDown, Lock, Ban, Users, User, Info, Trash2, BellOff, LogOut, FolderOpen, UserPlus, ArrowLeft } from "lucide-react";
 import { formatLastSeen } from "@utils/dateFormatter";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { useCall } from "@context/CallContext";
@@ -1066,8 +1066,15 @@ function ChatWindow({
               }
             }}
           >
-            <button className="md:hidden text-app-text-primary mr-4 text-xl" onClick={(e) => { e.stopPropagation(); setSelectedUser(null); }}>
-              ←
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedUser(null);
+              }}
+              className="md:hidden p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer shrink-0 mr-3"
+              title="Back to Sidebar"
+            >
+              <ArrowLeft size={20} />
             </button>
 
             {selectedUser.avatar ? (

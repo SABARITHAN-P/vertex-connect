@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, Check, X, Users, MessageSquare } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Check, X, Users } from "lucide-react";
 import api from "@services/api";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import toast from "react-hot-toast";
@@ -8,14 +8,7 @@ function FollowRequestsDrawer({ onClose, onRequestCountChange }) {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
 
-  // Close drawer on Escape (Priority: 7)
-  useEscapeKey(onClose, true, 7);
-
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/user/follow/requests");
@@ -29,7 +22,21 @@ function FollowRequestsDrawer({ onClose, onRequestCountChange }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onRequestCountChange]);
+
+  // Close drawer on Escape (Priority: 7)
+  useEscapeKey(onClose, true, 7);
+
+  useEffect(() => {
+    let active = true;
+    const handle = requestAnimationFrame(() => {
+      if (active) fetchRequests();
+    });
+    return () => {
+      active = false;
+      cancelAnimationFrame(handle);
+    };
+  }, [fetchRequests]);
 
   const handleAccept = async (requestId, username) => {
     try {

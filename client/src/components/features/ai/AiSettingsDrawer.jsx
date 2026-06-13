@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@services/api";
-import { ArrowLeft, Sparkles, Sliders, Activity, Trash2, Cpu } from "lucide-react";
+import { ArrowLeft, Sliders, Activity, Trash2, Cpu } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import toast from "react-hot-toast";
 import { premiumConfirm } from "@utils/alert";

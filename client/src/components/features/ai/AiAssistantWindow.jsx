@@ -9,13 +9,12 @@ import {
   StopCircle, 
   Copy, 
   RotateCw, 
-  Paperclip, 
   X, 
-  Settings, 
   Check, 
   FileText, 
   ArrowDown,
-  Info
+  Info,
+  ArrowLeft
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -30,16 +29,20 @@ const QUICK_PROMPTS = [
   { title: "Summarize Text", desc: "Extract key takeaways", prompt: "Summarize the key points of the following text:\n\n" },
 ];
 
-export default function AiAssistantWindow({ conversation, onUpdateConversation, onClearHistory }) {
+export default function AiAssistantWindow({ conversation, onUpdateConversation, onClearHistory, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
-  // File Upload State
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [attachedFile, setAttachedFile] = useState(null); // { fileName, fileSize, mimeType, extractedText }
+  const [attachedFile, setAttachedFile] = useState(null);
+
+  const [prevConversationId, setPrevConversationId] = useState(conversation?._id);
+  if (conversation?._id !== prevConversationId) {
+    setPrevConversationId(conversation?._id);
+    setAttachedFile(null);
+    setInput("");
+  }
   
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -47,8 +50,12 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
 
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const fileInputRef = useRef(null);
   const abortControllerRef = useRef(null);
+
+  const generatingRef = useRef(generating);
+  useEffect(() => {
+    generatingRef.current = generating;
+  }, [generating]);
 
   // Fetch Cloud vs Local mode info
   useEffect(() => {
@@ -56,7 +63,7 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
       try {
         const { data } = await api.get("/ai/models");
         setIsCloud(!!data.isCloud);
-      } catch (err) {
+      } catch {
         setIsCloud(false);
       }
     };
@@ -65,10 +72,11 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
 
   // Load message history on conversation mount
   useEffect(() => {
-    if (!conversation) return;
+    const activeConversationId = conversation?._id;
+    if (!activeConversationId) return;
     
     // Stop any active generation
-    if (generating) {
+    if (generatingRef.current) {
       handleStopGeneration();
     }
 
@@ -76,7 +84,7 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
       setLoading(true);
       setMessages([]);
       try {
-        const { data } = await api.get(`/ai/conversations/${conversation._id}/messages`);
+        const { data } = await api.get(`/ai/conversations/${activeConversationId}/messages`);
         setMessages(data || []);
       } catch (err) {
         console.error("Failed to load AI messages:", err);
@@ -87,8 +95,6 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
     };
 
     fetchMessages();
-    setAttachedFile(null);
-    setInput("");
   }, [conversation?._id]);
 
   // Scroll to bottom helper
@@ -115,7 +121,7 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
     if (messages.length > 0 && !loading) {
       scrollToBottom("auto");
     }
-  }, [loading]);
+  }, [loading, messages.length]);
 
   /* =========================================================
      MESSAGE SENDING (SSE STREAMING)
@@ -226,7 +232,7 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
                 }
                 done = true;
               }
-            } catch (err) {
+            } catch {
               // skip incomplete chunk lines
             }
           }
@@ -253,13 +259,13 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
     }
   };
 
-  const handleStopGeneration = () => {
+  function handleStopGeneration() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       setGenerating(false);
       toast.success("Generation stopped.");
     }
-  };
+  }
 
   const handleRegenerate = () => {
     if (messages.length < 2) return;
@@ -280,39 +286,6 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
     handleSendMessage(null, null, true);
   };
 
-  /* =========================================================
-     FILE PROCESSING
-  ========================================================= */
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const allowedExtensions = [".pdf", ".docx", ".txt", ".md"];
-    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-    if (!allowedExtensions.includes(ext)) {
-      toast.error("Unsupported file type. Use PDF, DOCX, TXT, or MD.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    setUploadingFile(true);
-    try {
-      const { data } = await api.post("/ai/parse-file", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setAttachedFile(data);
-      toast.success(`📎 File "${file.name}" attached successfully!`);
-    } catch (err) {
-      console.error("Document upload failed:", err);
-      toast.error(err.response?.data?.message || "Failed to process document");
-    } finally {
-      setUploadingFile(false);
-      e.target.value = null; // reset input
-    }
-  };
-
   const handleCopyMessageText = async (msgId, text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -330,7 +303,16 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
       {/* HEADER */}
       <div className="h-[60px] bg-app-header border-b border-app-border flex items-center justify-between px-6 z-10 select-none">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center border border-brand/30">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer shrink-0 mr-1"
+              title="Back to Sidebar"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center border border-brand/30 shrink-0">
             <Sparkles size={20} className="text-brand" />
           </div>
           <div>

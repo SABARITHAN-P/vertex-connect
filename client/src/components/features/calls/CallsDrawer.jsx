@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { ArrowLeft, Phone, Video, PhoneIncoming, PhoneOutgoing, PhoneMissed, Search, Loader } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { useCall } from "@context/CallContext";
@@ -14,7 +14,7 @@ function CallsDrawer({ onClose }) {
   // Bind centralized Escape key helper for drawer dismissal. Priority: 7
   useEscapeKey(onClose, true, 7);
 
-  const fetchCallLogs = async () => {
+  const fetchCallLogs = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/call/history");
@@ -25,11 +25,18 @@ function CallsDrawer({ onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchCallLogs();
-  }, []);
+    let active = true;
+    const handle = requestAnimationFrame(() => {
+      if (active) fetchCallLogs();
+    });
+    return () => {
+      active = false;
+      cancelAnimationFrame(handle);
+    };
+  }, [fetchCallLogs]);
 
   const formatDuration = (s) => {
     if (!s) return "0s";

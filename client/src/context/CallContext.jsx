@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { socket } from "@socket/socket";
 import { toneSynthesizer } from "@utils/toneSynthesizer";
 import api from "@services/api";
@@ -16,6 +16,7 @@ const ICE_SERVERS = {
   ],
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCall = () => useContext(CallContext);
 
 export const CallProvider = ({ children }) => {
@@ -245,7 +246,7 @@ export const CallProvider = ({ children }) => {
       socket.emit("call:accept", { callerId: caller._id, callId });
 
       // Build peer connection
-      const pc = createPeerConnection(false, caller._id, type, callId);
+      createPeerConnection(false, caller._id, type, callId);
 
       // We wait for the caller to send us the SDP offer
     } catch (err) {
@@ -258,7 +259,7 @@ export const CallProvider = ({ children }) => {
   // Reject call
   const rejectCall = async () => {
     if (!incomingCall) return;
-    const { caller, callId, type } = incomingCall;
+    const { caller, callId } = incomingCall;
     console.log(`Rejecting call ${callId} from ${caller.username}`);
 
     toneSynthesizer.stopAll();
@@ -276,7 +277,7 @@ export const CallProvider = ({ children }) => {
       return;
     }
 
-    const { peer, callId, type, isCaller } = activeCall;
+    const { peer, callId, isCaller } = activeCall;
     console.log(`Ending active call ${callId} with ${peer.username}`);
 
     socket.emit("call:end", { peerId: peer._id || peer.id, callId });
@@ -302,7 +303,7 @@ export const CallProvider = ({ children }) => {
     const finalDuration = callDuration;
 
     if (activeCall) {
-      const { peer, type, isCaller } = activeCall;
+      const { isCaller } = activeCall;
       
       if (isCaller && callDbIdRef.current) {
         api.patch(`/call/history/${callDbIdRef.current}`, {
@@ -341,6 +342,11 @@ export const CallProvider = ({ children }) => {
     }
   };
 
+  const handlersRef = useRef({ createPeerConnection, endCall, handleCallEndByPeer });
+  useEffect(() => {
+    handlersRef.current = { createPeerConnection, endCall, handleCallEndByPeer };
+  });
+
   // Listen to sockets
   useEffect(() => {
     // 1. Incoming Call
@@ -361,7 +367,7 @@ export const CallProvider = ({ children }) => {
     });
 
     // 2. Caller receives: Ringing confirmation
-    socket.on("call:ringing", ({ callId }) => {
+    socket.on("call:ringing", () => {
       console.log(`Socket Received: Call is ringing on receiver's end.`);
       if (callState === "calling") {
         setCallState("ringing");
@@ -378,7 +384,7 @@ export const CallProvider = ({ children }) => {
 
       if (activeCall) {
         const { peer, type } = activeCall;
-        const pc = createPeerConnection(true, peer._id || peer.id, type, callId);
+        const pc = handlersRef.current.createPeerConnection(true, peer._id || peer.id, type, callId);
 
         // Caller creates SDP Offer
         try {
@@ -393,7 +399,7 @@ export const CallProvider = ({ children }) => {
           });
         } catch (err) {
           console.error("Failed to create offer:", err);
-          endCall();
+          handlersRef.current.endCall();
         }
       }
     });
@@ -418,7 +424,7 @@ export const CallProvider = ({ children }) => {
           }
         } catch (err) {
           console.error("Failed to handle offer / create answer:", err);
-          endCall();
+          handlersRef.current.endCall();
         }
       }
     });
@@ -431,7 +437,7 @@ export const CallProvider = ({ children }) => {
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
         } catch (err) {
           console.error("Failed to set remote answer description:", err);
-          endCall();
+          handlersRef.current.endCall();
         }
       }
     });
@@ -449,7 +455,7 @@ export const CallProvider = ({ children }) => {
     });
 
     // 7. Caller receives: Rejected call from receiver
-    socket.on("call:rejected", ({ callId }) => {
+    socket.on("call:rejected", () => {
       console.log("Socket Received: Call rejected.");
       setCallState("rejected");
       toneSynthesizer.playEndTone();
@@ -466,12 +472,12 @@ export const CallProvider = ({ children }) => {
     });
 
     // 8. Call ended by peer
-    socket.on("call:ended", ({ callId, reason }) => {
+    socket.on("call:ended", ({ reason }) => {
       console.log(`Socket Received: Call ended. Reason: ${reason}`);
       if (reason === "peer_disconnected") {
         toast.error("Call disconnected: Connection lost.");
       }
-      handleCallEndByPeer();
+      handlersRef.current.handleCallEndByPeer();
     });
 
     // 9. Call failed

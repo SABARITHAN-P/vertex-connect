@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Search, UserMinus, UserCheck, MessageSquare, ShieldAlert, Users, Compass } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { ArrowLeft, Search, UserMinus, MessageSquare, Users, Compass } from "lucide-react";
 import api from "@services/api";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { socket } from "@socket/socket";
@@ -17,7 +17,7 @@ function FollowersFollowingDrawer({ onClose, currentUserId, onOpenChat }) {
   useEscapeKey(onClose, true, 7);
 
   // Fetch lists
-  const fetchLists = async () => {
+  const fetchLists = useCallback(async () => {
     try {
       setLoading(true);
       const followersRes = await api.get(`/user/follow/followers/${currentUserId}`);
@@ -30,10 +30,13 @@ function FollowersFollowingDrawer({ onClose, currentUserId, onOpenChat }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserId]);
 
   useEffect(() => {
-    fetchLists();
+    let active = true;
+    const handle = requestAnimationFrame(() => {
+      if (active) fetchLists();
+    });
 
     // Listen to real-time follow status updates via Socket.io
     const handleFollowUpdate = () => {
@@ -42,9 +45,11 @@ function FollowersFollowingDrawer({ onClose, currentUserId, onOpenChat }) {
 
     socket.on("follow:update", handleFollowUpdate);
     return () => {
+      active = false;
+      cancelAnimationFrame(handle);
       socket.off("follow:update", handleFollowUpdate);
     };
-  }, [currentUserId]);
+  }, [fetchLists]);
 
   // Unfollow action
   const handleUnfollow = async (userId, username) => {

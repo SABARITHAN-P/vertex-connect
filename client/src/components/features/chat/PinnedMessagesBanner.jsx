@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pin, ChevronLeft, ChevronRight, X } from "lucide-react";
 
-function PinnedMessagesBanner({ pinnedMessages = [], onJumpToMessage, onUnpinMessage, isAdmin }) {
+function PinnedMessagesBanner({ pinnedMessages = [], onJumpToMessage, onUnpinMessage }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (pinnedMessages.length === 0) return null;

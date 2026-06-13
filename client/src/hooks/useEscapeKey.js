@@ -1,16 +1,18 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useId } from "react";
 import { escapeKeyManager } from "@utils/escapeKeyManager";
 
 export function useEscapeKey(callback, active = true, priority = 0, id = null) {
-  const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+  const reactId = useId();
+  const uniqueId = id || reactId;
 
-  // Generate a stable unique ID if not provided
-  const uniqueIdRef = useRef(id || Math.random().toString(36).substring(2, 9));
+  const callbackRef = useRef(callback);
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   useEffect(() => {
     if (!active) {
-      escapeKeyManager.unregister(uniqueIdRef.current);
+      escapeKeyManager.unregister(uniqueId);
       return;
     }
 
@@ -20,10 +22,10 @@ export function useEscapeKey(callback, active = true, priority = 0, id = null) {
       }
     };
 
-    escapeKeyManager.register(uniqueIdRef.current, handleEscape, priority);
+    escapeKeyManager.register(uniqueId, handleEscape, priority);
 
     return () => {
-      escapeKeyManager.unregister(uniqueIdRef.current);
+      escapeKeyManager.unregister(uniqueId);
     };
-  }, [active, priority]);
+  }, [active, priority, uniqueId]);
 }

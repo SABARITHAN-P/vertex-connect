@@ -657,6 +657,7 @@ function ChatPage() {
               setSelectedUser(null);
               window.dispatchEvent(new CustomEvent("ai-conversations-updated"));
             }}
+            onClose={() => setSelectedUser(null)}
           />
         ) : (
           <ChatWindow

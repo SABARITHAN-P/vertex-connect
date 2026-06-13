@@ -505,10 +505,9 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
             <>
               {/* INTEGRATED EMOJI MEDIA PANEL */}
               {showEmojiPicker && (
-                <div ref={emojiPickerRef} className="absolute bottom-16 left-4 z-50">
+                <div ref={emojiPickerRef} className="absolute bottom-16 left-4 right-4 sm:right-auto z-50">
                   <MediaPanel
                     onEmojiSelect={(emoji) => setMessage((prev) => prev + emoji)}
-                    onClose={() => setShowEmojiPicker(false)}
                   />
                 </div>
               )}

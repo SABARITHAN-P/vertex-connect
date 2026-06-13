@@ -29,7 +29,7 @@ const stopAll = () => {
     try {
       oscs.forEach((osc) => osc.stop());
       gainNode.disconnect();
-    } catch (e) {
+    } catch {
       // already stopped or discarded
     }
   });
@@ -75,7 +75,9 @@ const playDialTone = () => {
         osc1.stop();
         osc2.stop();
         gainNode.disconnect();
-      } catch (err) {}
+      } catch {
+        // ignore error
+      }
       activeNodes = activeNodes.filter((n) => n !== nodeRef);
     }, 1600);
   };
@@ -123,7 +125,9 @@ const playIncomingRingtone = () => {
         try {
           osc.stop();
           gainNode.disconnect();
-        } catch (e) {}
+        } catch {
+          // ignore error
+        }
         activeNodes = activeNodes.filter((n) => n !== nodeRef);
       }, (index * 0.15 + 1.0) * 1000);
     });
@@ -168,7 +172,9 @@ const playEndTone = () => {
       try {
         osc.stop();
         gainNode.disconnect();
-      } catch (e) {}
+      } catch {
+        // ignore error
+      }
       activeNodes = activeNodes.filter((n) => n !== nodeRef);
     }, (index * 0.12 + 0.3) * 1000);
   });

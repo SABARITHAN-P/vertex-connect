@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
-import { ArrowLeft, Globe, Lock, Shield, Users, MessageCircle, AlertCircle, Eye, Camera, UserMinus, Mail } from "lucide-react";
+import { ArrowLeft, Globe, Lock, Shield, Users, MessageCircle, Eye, Camera, UserMinus, Mail } from "lucide-react";
 import api from "@services/api";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 
@@ -134,15 +134,6 @@ function PrivacySettingsDrawer({ onClose }) {
               <Lock size={18} />
               <span className="text-xs font-semibold">Private Account</span>
             </button>
-          </div>
-
-          <div className="flex items-start gap-2.5 bg-app-header/50 p-3 rounded-xl border border-app-border/60">
-            <AlertCircle size={14} className="text-brand shrink-0 mt-0.5" />
-            <p className="text-[10px] text-app-text-secondary leading-normal">
-              {settings.accountType === "private"
-                ? "Private Account: Only users who mutually follow you can start new chat sessions or send messages."
-                : "Public Account: Anyone can send you initial messages, but you can only reply if you follow them back."}
-            </p>
           </div>
         </div>
 

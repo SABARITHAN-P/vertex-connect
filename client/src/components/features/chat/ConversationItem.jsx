@@ -1,6 +1,6 @@
 import { Users } from "lucide-react";
 
-function ConversationItem({ user, unreadCount, isMarkedUnread, onClick, isTyping, isOnline, isActive }) {
+function ConversationItem({ user, unreadCount, isMarkedUnread, onClick, isTyping, isActive }) {
   /* =========================
      LAST MESSAGE PREVIEW
   ========================== */
