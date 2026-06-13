@@ -332,6 +332,7 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
       const { data } = await api.post("/message", {
         chatId: selectedUser.chatId,
         content: caption,
+        caption: caption,
         media: uploadedMedia,
         messageType: processedFiles.length === 1 ? detectMessageType(processedFiles[0].type) : "media",
         replyTo: buildReplyToObj(),
@@ -395,6 +396,7 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
       sender: { _id: (currentUser.id || currentUser._id), username: currentUser.username },
       createdAt: new Date(),
       content: caption,
+      caption: caption,
       messageType: processedFiles.length === 1 ? processedFiles[0].type : "media",
       media: processedFiles.map((item) => ({
         url: item.previewUrl,

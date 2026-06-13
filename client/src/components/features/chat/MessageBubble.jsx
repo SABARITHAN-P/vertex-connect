@@ -1,4 +1,4 @@
-import { Check, CheckCheck, FileText, Download, Smile, X, Reply, Pin, Edit3, Trash2, ShieldAlert, Forward, Vote, Info } from "lucide-react";
+import { Check, CheckCheck, FileText, Download, Smile, X, Reply, Pin, Edit3, Trash2, ShieldAlert, Forward, Vote, Info, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import EmojiPicker from "emoji-picker-react";
 import api from "@services/api";
@@ -19,6 +19,14 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showVotesModal, setShowVotesModal] = useState(false);
   const [now] = useState(() => Date.now());
+  const [downloadedUrls, setDownloadedUrls] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vertex_downloaded_files");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Centralized ESC handling in MessageBubble
   useEscapeKey(() => setIsEditing(false), isEditing, 25);
@@ -63,6 +71,154 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
   const editTimeLimit = isViewed ? (10 * 60 * 1000) : (2 * 60 * 60 * 1000);
   const canEditMessage = now - new Date(createdAt).getTime() < editTimeLimit;
 
+  const renderGalleryGrid = (galleryMedia) => {
+    const count = galleryMedia.length;
+    if (count === 0) return null;
+
+    if (count === 1) {
+      const item = galleryMedia[0];
+      return (
+        <div 
+          className="relative cursor-pointer max-w-[280px] min-h-[160px] md:min-h-[200px] w-full bg-black/5 dark:bg-white/5 rounded-lg overflow-hidden" 
+          onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
+        >
+          {item.type === "image" ? (
+            <img src={item.url} alt="shared" className="w-full h-full object-cover rounded-lg hover:scale-102 transition duration-200" />
+          ) : (
+            <div className="relative w-full h-full flex items-center justify-center bg-black min-h-[160px]">
+              <video src={item.url} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center text-white">
+                  <Play size={20} fill="currentColor" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (count === 2) {
+      return (
+        <div className="grid grid-cols-2 gap-1.5 max-w-[280px]">
+          {galleryMedia.map((item, index) => (
+            <div 
+              key={index} 
+              className="overflow-hidden rounded-lg h-[140px] w-full bg-black/5 dark:bg-white/5 cursor-pointer" 
+              onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
+            >
+              {item.type === "image" ? (
+                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+              ) : (
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <video src={item.url} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play size={16} fill="currentColor" className="text-white" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (count === 3) {
+      return (
+        <div className="grid grid-cols-2 gap-1.5 max-w-[280px]">
+          {galleryMedia.slice(0, 2).map((item, index) => (
+            <div 
+              key={index} 
+              className="overflow-hidden rounded-lg h-[100px] w-full bg-black/5 dark:bg-white/5 cursor-pointer" 
+              onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
+            >
+              {item.type === "image" ? (
+                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+              ) : (
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <video src={item.url} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play size={16} fill="currentColor" className="text-white" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {galleryMedia.slice(2, 3).map((item, index) => (
+            <div 
+              key={index} 
+              className="col-span-2 overflow-hidden rounded-lg h-[120px] w-full bg-black/5 dark:bg-white/5 cursor-pointer" 
+              onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
+            >
+              {item.type === "image" ? (
+                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+              ) : (
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <video src={item.url} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play size={16} fill="currentColor" className="text-white" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    const visibleCount = 4;
+    const remaining = count - visibleCount;
+
+    return (
+      <div className="grid grid-cols-2 gap-1.5 max-w-[280px]">
+        {galleryMedia.slice(0, 3).map((item, index) => (
+          <div 
+            key={index} 
+            className="overflow-hidden rounded-lg h-[100px] w-full bg-black/5 dark:bg-white/5 cursor-pointer" 
+            onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
+          >
+            {item.type === "image" ? (
+              <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+            ) : (
+              <div className="relative w-full h-full flex items-center justify-center bg-black">
+                <video src={item.url} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <Play size={16} fill="currentColor" className="text-white" />
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {galleryMedia.slice(3, 4).map((item, index) => {
+          const hasMore = remaining > 0;
+          return (
+            <div 
+              key={index} 
+              className="relative overflow-hidden rounded-lg h-[100px] w-full bg-black/5 dark:bg-white/5 cursor-pointer" 
+              onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
+            >
+              {item.type === "image" ? (
+                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+              ) : (
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <video src={item.url} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play size={16} fill="currentColor" className="text-white" />
+                  </div>
+                </div>
+              )}
+              {hasMore && (
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-lg select-none">
+                  +{remaining + 1}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target)) {
@@ -75,8 +231,24 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
         setShowActionsMenu(false);
       }
     };
+
+    const handleFileDownloadedEvent = (e) => {
+      const downloadedUrl = e.detail;
+      setDownloadedUrls((prev) => {
+        if (!prev.includes(downloadedUrl)) {
+          return [...prev, downloadedUrl];
+        }
+        return prev;
+      });
+    };
+
     document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
+    window.addEventListener("file-downloaded", handleFileDownloadedEvent);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      window.removeEventListener("file-downloaded", handleFileDownloadedEvent);
+    };
   }, []);
 
   if (message.isSystem) {
@@ -229,22 +401,80 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
   };
 
   const handleFileDownload = async (e, fileUrl, fileName) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     try {
+      if (!fileUrl) {
+        alert("This file is not available for download.");
+        return;
+      }
+
+      // Fetch the file as a blob to preserve format and filename
       const response = await fetch(fileUrl);
+      if (!response.ok) {
+        if (response.status === 404) {
+          alert("File not found: This file does not exist on the server.");
+        } else {
+          alert(`Unable to download: Server returned error status ${response.status}.`);
+        }
+        return;
+      }
+
       const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
+      
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = fileName;
+      link.download = fileName || "file";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      URL.revokeObjectURL(blobUrl);
+
+      // Record successful download locally
+      try {
+        const currentSaved = localStorage.getItem("vertex_downloaded_files");
+        const list = currentSaved ? JSON.parse(currentSaved) : [];
+        if (!list.includes(fileUrl)) {
+          list.push(fileUrl);
+          localStorage.setItem("vertex_downloaded_files", JSON.stringify(list));
+          window.dispatchEvent(new CustomEvent("file-downloaded", { detail: fileUrl }));
+        }
+      } catch (err) {
+        console.error("Error saving download status:", err);
+      }
     } catch (error) {
-      console.error("Direct file download failed:", error);
-      window.open(fileUrl, "_blank");
+      console.error("Direct file download failed, falling back:", error);
+      
+      // Fallback: Use window.open with fl_attachment if possible
+      let downloadUrl = fileUrl;
+      const isRaw = fileUrl.includes("/raw/");
+      if (!isRaw && fileUrl.includes("cloudinary.com") && fileUrl.includes("/upload/")) {
+        const parts = fileUrl.split("/upload/");
+        const cleanFileName = encodeURIComponent(fileName || "file").replace(/%20/g, "_");
+        downloadUrl = `${parts[0]}/upload/fl_attachment:${cleanFileName}/${parts[1]}`;
+      }
+      
+      const downloadWindow = window.open(downloadUrl, "_blank");
+      if (!downloadWindow) {
+        alert("Direct download blocked by popup blocker. Opening file in a new tab.");
+        window.open(fileUrl, "_blank");
+      }
+
+      // Record successful download locally (fallback mode)
+      try {
+        const currentSaved = localStorage.getItem("vertex_downloaded_files");
+        const list = currentSaved ? JSON.parse(currentSaved) : [];
+        if (!list.includes(fileUrl)) {
+          list.push(fileUrl);
+          localStorage.setItem("vertex_downloaded_files", JSON.stringify(list));
+          window.dispatchEvent(new CustomEvent("file-downloaded", { detail: fileUrl }));
+        }
+      } catch (err) {
+        console.error("Error saving download status:", err);
+      }
     }
   };
 
@@ -279,10 +509,13 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
       onMouseEnter={() => setShowReactionTrigger(true)}
       onMouseLeave={() => {
         setShowReactionTrigger(false);
-        setShowActionsMenu(false);
       }}
       onContextMenu={(e) => {
         e.preventDefault();
+        if (!isDeleted) {
+          setShowReactionTrigger(true);
+          setShowActionsMenu(true);
+        }
       }}
       onDoubleClickCapture={handleDoubleClick}
       onTouchStartCapture={handleTouchStart}
@@ -353,7 +586,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
           )}
 
           {/* ACTIONS TRIGGER & MENU */}
-          {showReactionTrigger && !isDeleted && (
+          {(showReactionTrigger || showActionsMenu || showReactions) && !isDeleted && (
             <div
               className={`absolute top-1/2 -translate-y-1/2 z-40 flex items-center gap-1 transition-all duration-300 animate-fade-in ${own ? "right-full mr-2" : "left-full ml-2"
                 }`}
@@ -440,7 +673,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
                 : "hover:brightness-105"
               } ${isSticker
                 ? "bg-transparent text-app-text-primary"
-                : own ? "message-bubble-padding bg-app-bubble-outgoing text-app-bubble-outgoing-text rounded-xl px-3 py-2 shadow-sm min-w-[120px]" : "message-bubble-padding bg-app-bubble-incoming text-app-text-primary rounded-xl px-3 py-2 shadow-sm min-w-[120px]"
+                : own ? "message-bubble-padding premium-bubble-outgoing text-app-bubble-outgoing-text rounded-2xl px-4 py-2.5 min-w-[120px]" : "message-bubble-padding premium-bubble-incoming text-app-text-primary rounded-2xl px-4 py-2.5 min-w-[120px]"
               }`}
           >
             {/* OPTIMISTIC UPLOAD OVERLAY */}
@@ -589,49 +822,54 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
               /* MEDIA GRIDS */
               <div className="space-y-2">
                 {media.length === 0 && mediaUrl ? (
-                  <div className="relative cursor-pointer max-w-[280px] min-h-[160px] md:min-h-[200px] w-full bg-[#2a3942]/30 rounded-lg overflow-hidden" onClick={() => onViewMedia?.({ url: mediaUrl, type: "image", senderName: sender?.username || "User", time })}>
+                  <div className="relative cursor-pointer max-w-[280px] min-h-[160px] md:min-h-[200px] w-full bg-black/5 dark:bg-white/5 rounded-lg overflow-hidden" onClick={() => onViewMedia?.({ url: mediaUrl, type: "image", senderName: sender?.username || "User", time })}>
                     <img src={mediaUrl} alt="shared" className="w-full h-full object-cover rounded-lg" />
                   </div>
                 ) : (
-                  <div className="grid gap-1.5 max-w-[280px]">
-                    {media.map((item, index) => {
+                  <>
+                    {/* WhatsApp-style photo & video gallery grid */}
+                    {renderGalleryGrid(media.filter(item => item.type === "image" || item.type === "video"))}
 
-                      if (item.type === "image") {
-                        return (
-                          <div key={index} className="overflow-hidden rounded-lg min-h-[160px] md:min-h-[200px] w-full bg-[#2a3942]/30" onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}>
-                            <img src={item.url} alt="media" className="w-full h-full object-cover cursor-pointer hover:scale-102 transition" />
-                          </div>
-                        );
-                      }
-                      if (item.type === "video") {
-                        return (
-                          <div key={index} className="overflow-hidden rounded-lg bg-black min-h-[160px] md:min-h-[200px] w-full bg-[#2a3942]/30 flex items-center justify-center" onClick={(e) => { e.preventDefault(); onViewMedia?.({ ...item, senderName: sender?.username || "User", time }); }}>
-                            <video src={item.url} controls className="w-full h-full object-cover" />
-                          </div>
-                        );
-                      }
-
-                      if (item.type === "audio") {
-                        const isVoice = item.fileName?.startsWith("voice-message");
-                        return (
-                          <div key={index} className={`rounded-lg ${isVoice ? "p-1" : "bg-black/20 p-2.5"}`}>
-                            {!isVoice && <p className="text-xs mb-1.5 truncate font-medium">{item.fileName}</p>}
-                            <CustomAudioPlayer src={item.url} isVoiceMessage={isVoice} messageId={_id} own={own} isPlayed={isMessageRead} peaks={item.peaks} />
-                          </div>
-                        );
-                      }
-                      return (
-                        <a key={index} href={item.url} onClick={(e) => handleFileDownload(e, item.url, item.fileName)} className="flex items-center gap-2.5 bg-black/20 p-2.5 rounded-lg hover:bg-black/30 transition">
-                          <FileText size={24} className="shrink-0 text-gray-300" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs truncate font-medium">{item.fileName}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{formatFileSize(item.fileSize)}</p>
-                          </div>
-                          <Download size={14} className="shrink-0 text-gray-400" />
-                        </a>
-                      );
-                    })}
-                  </div>
+                    {/* Audio & document file lists */}
+                    {media.filter(item => item.type !== "image" && item.type !== "video").length > 0 && (
+                      <div className="grid gap-1.5 max-w-[280px] mt-1.5">
+                        {media.filter(item => item.type !== "image" && item.type !== "video").map((item, index) => {
+                          if (item.type === "audio") {
+                            const isVoice = item.fileName?.startsWith("voice-message");
+                            return (
+                              <div key={index} className={`rounded-lg ${isVoice ? "p-1" : "bg-black/5 dark:bg-black/20 p-2.5"}`}>
+                                {!isVoice && <p className={`text-xs mb-1.5 truncate font-medium ${own ? "text-app-bubble-outgoing-text/80" : "text-app-text-secondary"}`}>{item.fileName}</p>}
+                                <CustomAudioPlayer src={item.url} isVoiceMessage={isVoice} messageId={_id} own={own} isPlayed={isMessageRead} peaks={item.peaks} />
+                              </div>
+                            );
+                          }
+                          return (
+                            <a 
+                              key={index} 
+                              href={item.url} 
+                              onClick={(e) => handleFileDownload(e, item.url, item.fileName)} 
+                              className={`flex items-center gap-2.5 p-2.5 rounded-lg transition ${
+                                own 
+                                  ? "bg-black/5 dark:bg-black/25 hover:bg-black/10 dark:hover:bg-black/35" 
+                                  : "bg-black/5 dark:bg-black/20 hover:bg-black/10 dark:hover:bg-black/30"
+                              }`}
+                            >
+                              <FileText size={24} className={`shrink-0 ${own ? "text-app-bubble-outgoing-text/70" : "text-app-text-secondary"}`} />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs truncate font-medium">{item.fileName}</p>
+                                <p className={`text-[10px] ${own ? "text-app-bubble-outgoing-text/60" : "text-app-text-secondary/80"} mt-0.5`}>
+                                  {formatFileSize(item.fileSize)}
+                                </p>
+                              </div>
+                              {!downloadedUrls.includes(item.url) && (
+                                <Download size={14} className={`shrink-0 ${own ? "text-app-bubble-outgoing-text/60" : "text-app-text-secondary"}`} />
+                              )}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
                 {caption && <p className="text-xs px-0.5 pt-1 break-words">{caption}</p>}
               </div>

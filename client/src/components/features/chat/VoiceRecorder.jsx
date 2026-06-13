@@ -36,11 +36,15 @@ function VoiceRecorder({ onSend, onCancel }) {
   const [previewDuration, setPreviewDuration] = useState(0);
   const [previewCurrentTime, setPreviewCurrentTime] = useState(0);
 
+  const [isPreviewDragging, setIsPreviewDragging] = useState(false);
+  const [previewHoveredIndex, setPreviewHoveredIndex] = useState(null);
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerIntervalRef = useRef(null);
   const peakSamplerRef = useRef(null);
   const localAudioRef = useRef(null);
+  const previewWaveformContainerRef = useRef(null);
 
   /* VISUALIZER REFS */
   const canvasRef = useRef(null);
@@ -73,7 +77,7 @@ function VoiceRecorder({ onSend, onCancel }) {
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       audioContextRef.current.close();
     }
-  };
+  }
 
   function startVisualizer(stream) {
     try {
@@ -131,7 +135,7 @@ function VoiceRecorder({ onSend, onCancel }) {
     } catch (err) {
       console.log("Canvas visualizer error:", err);
     }
-  };
+  }
 
   async function startRecording() {
     try {
@@ -185,7 +189,7 @@ function VoiceRecorder({ onSend, onCancel }) {
       toast.error("Microphone permission denied or unavailable");
       onCancel();
     }
-  };
+  }
 
   function stopRecording() {
     if (mediaRecorderRef.current && recording) {
@@ -199,7 +203,7 @@ function VoiceRecorder({ onSend, onCancel }) {
         cleanupVisualizer();
       }
     }
-  };
+  }
 
   const handlePauseToggle = () => {
     if (!mediaRecorderRef.current) return;
@@ -236,12 +240,15 @@ function VoiceRecorder({ onSend, onCancel }) {
   // Interpolates/Buckets recorded peaks to exactly 40 elements for neat UI rendering
   const capPeaks = (peaksArray, targetCount = 40) => {
     if (!peaksArray || peaksArray.length === 0) {
-      return Array.from({ length: targetCount }, () => Math.max(0.1, Math.random() * 0.4));
+      // Pure deterministic fallback peaks to satisfy react-hooks/purity
+      return Array.from({ length: targetCount }, (_, i) => {
+        return Number((0.15 + (Math.sin(i * 0.5) * 0.15)).toFixed(2));
+      });
     }
     if (peaksArray.length <= targetCount) {
       const padded = [...peaksArray];
       while (padded.length < targetCount) {
-        padded.push(padded[padded.length - 1] || 0.1);
+        padded.push(padded[padded.length - 1] || 0.15);
       }
       return padded;
     }
@@ -288,14 +295,14 @@ function VoiceRecorder({ onSend, onCancel }) {
       audio.pause();
       setIsPreviewPlaying(false);
     } else {
-      audio.play();
+      audio.play().catch(err => console.error(err));
       setIsPreviewPlaying(true);
     }
   };
 
   const handlePreviewTimeUpdate = () => {
     const audio = localAudioRef.current;
-    if (!audio) return;
+    if (!audio || isPreviewDragging) return;
     setPreviewCurrentTime(audio.currentTime);
     setPreviewProgress((audio.currentTime / (audio.duration || 1)) * 100);
   };
@@ -306,14 +313,79 @@ function VoiceRecorder({ onSend, onCancel }) {
     setPreviewCurrentTime(0);
   };
 
+  const handlePreviewScrub = (e) => {
+    if (!previewWaveformContainerRef.current || !previewDuration) return;
+    const rect = previewWaveformContainerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const clickedPercentage = Math.max(0, Math.min(100, (clickX / width) * 100));
+
+    const audio = localAudioRef.current;
+    if (audio) {
+      audio.currentTime = (clickedPercentage / 100) * previewDuration;
+    }
+    setPreviewCurrentTime((clickedPercentage / 100) * previewDuration);
+    setPreviewProgress(clickedPercentage);
+  };
+
+  const handlePreviewMouseDown = (e) => {
+    setIsPreviewDragging(true);
+    handlePreviewScrub(e);
+  };
+
+  useEffect(() => {
+    const handlePreviewMouseMoveGlobal = (e) => {
+      if (!isPreviewDragging || !previewWaveformContainerRef.current || !previewDuration) return;
+      const rect = previewWaveformContainerRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const clickedPercentage = Math.max(0, Math.min(100, (clickX / width) * 100));
+
+      const audio = localAudioRef.current;
+      if (audio) {
+        audio.currentTime = (clickedPercentage / 100) * previewDuration;
+      }
+      setPreviewCurrentTime((clickedPercentage / 100) * previewDuration);
+      setPreviewProgress(clickedPercentage);
+    };
+
+    const handlePreviewMouseUpGlobal = () => {
+      setIsPreviewDragging(false);
+    };
+
+    if (isPreviewDragging) {
+      window.addEventListener("mousemove", handlePreviewMouseMoveGlobal);
+      window.addEventListener("mouseup", handlePreviewMouseUpGlobal);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handlePreviewMouseMoveGlobal);
+      window.removeEventListener("mouseup", handlePreviewMouseUpGlobal);
+    };
+  }, [isPreviewDragging, previewDuration]);
+
+  const handlePreviewMouseMove = (e) => {
+    if (!previewWaveformContainerRef.current) return;
+    const rect = previewWaveformContainerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = Math.max(0, Math.min(100, (clickX / width) * 100));
+    const index = Math.floor((percentage / 100) * sampleWaves.length);
+    setPreviewHoveredIndex(index);
+  };
+
+  const handlePreviewMouseLeave = () => {
+    setPreviewHoveredIndex(null);
+  };
+
   const formatDuration = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-    const s = (seconds % 60).toString().padStart(2, "0");
+    const s = Math.floor(seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
 
   const sampleWaves = useMemo(() => {
-    return capPeaks(recordedPeaks, 40);
+    return capPeaks(recordedPeaks, 38);
   }, [recordedPeaks]);
 
   const playedPreviewCount = Math.floor((previewProgress / 100) * sampleWaves.length);
@@ -383,7 +455,7 @@ function VoiceRecorder({ onSend, onCancel }) {
           ========================================== */}
       {!previewBlob ? (
         <div className="flex items-center gap-4 flex-1 justify-between">
-          {/* TRASH CANCEL */}
+          {/* TRASH CAN CANCEL */}
           <button
             onClick={handleCancel}
             className="w-10 h-10 flex items-center justify-center rounded-full text-app-text-secondary hover:text-red-500 hover:bg-red-500/10 transition-all duration-200 cursor-pointer"
@@ -457,30 +529,82 @@ function VoiceRecorder({ onSend, onCancel }) {
           {/* PLAY/PAUSE PREVIEW */}
           <button
             onClick={togglePlayPausePreview}
-            className="w-9 h-9 flex items-center justify-center bg-app-hover border border-app-border text-app-text-primary rounded-full hover:bg-app-hover/80 transition shrink-0 cursor-pointer"
+            className="w-10 h-10 flex items-center justify-center bg-brand hover:brightness-110 text-white rounded-full transition-all duration-300 shadow-md active:scale-95 shrink-0 cursor-pointer border border-white/10"
             title={isPreviewPlaying ? "Pause Preview" : "Play Preview"}
           >
-            {isPreviewPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
+            {isPreviewPlaying ? <Pause size={16} className="text-white fill-white animate-fade-in" /> : <Play size={16} className="text-white fill-white ml-0.5 animate-fade-in" />}
           </button>
 
           {/* DYNAMIC STATIC WAVEFORM OF RECORDED PEAKS */}
-          <div className="flex-1 flex items-center gap-[2.5px] h-6 justify-center max-w-[200px] overflow-hidden select-none">
+          <div 
+            ref={previewWaveformContainerRef}
+            onMouseDown={handlePreviewMouseDown}
+            onMouseMove={handlePreviewMouseMove}
+            onMouseLeave={handlePreviewMouseLeave}
+            className="flex-1 flex items-center gap-[2px] h-7 justify-center max-w-[200px] select-none cursor-pointer relative group"
+            title="Drag or click to seek"
+          >
             {sampleWaves.map((peak, idx) => {
               const isPlayed = idx <= playedPreviewCount;
+              const isHovered = previewHoveredIndex !== null && idx <= previewHoveredIndex;
+              
+              let barColor;
+              let barOpacity;
+              
+              if (isPlayed) {
+                barColor = "var(--brand-color)";
+                barOpacity = "opacity-100";
+              } else if (isHovered) {
+                barColor = "var(--brand-color)";
+                barOpacity = "opacity-70";
+              } else {
+                barColor = "currentColor";
+                barOpacity = "opacity-30 group-hover:opacity-40";
+              }
+
+              // Fisheye zoom effect on hover
+              let scaleY = 1;
+              if (previewHoveredIndex !== null) {
+                const distance = Math.abs(idx - previewHoveredIndex);
+                if (distance === 0) scaleY = 1.35;
+                else if (distance === 1) scaleY = 1.2;
+                else if (distance === 2) scaleY = 1.08;
+              } else if (isPlayed && isPreviewPlaying) {
+                scaleY = 1.05;
+              }
+
               return (
                 <div
                   key={idx}
-                  className={`w-[3px] rounded-full transition-colors duration-200 ${
-                    isPlayed ? "bg-brand scale-y-105" : "bg-app-text-secondary/40"
-                  }`}
-                  style={{ height: `${Math.max(12, peak * 100)}%` }}
+                  className={`w-[3px] rounded-full transition-all duration-200 ${barOpacity}`}
+                  style={{ 
+                    height: `${Math.max(12, peak * 100)}%`,
+                    backgroundColor: barColor,
+                    transform: `scaleY(${scaleY})`,
+                    transformOrigin: "center"
+                  }}
                 />
               );
             })}
+
+            {/* ACTIVE HOVER/DRAG HANDLE */}
+            <div 
+              className={`absolute h-3 w-3 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.3)] transition-all duration-200 pointer-events-none flex items-center justify-center -translate-y-1/2 top-1/2 ${
+                isPreviewDragging || previewHoveredIndex !== null ? "opacity-100 scale-110" : "opacity-0"
+              }`}
+              style={{ 
+                left: `calc(${previewProgress}% - 6px)`, 
+                border: "2px solid var(--brand-color)"
+              }}
+            >
+              <div 
+                className="w-1 h-1 rounded-full bg-brand" 
+              />
+            </div>
           </div>
 
           {/* PREVIEW COUNTER */}
-          <span className="text-app-text-primary text-xs font-semibold tabular-nums tracking-wide">
+          <span className="text-app-text-primary text-xs font-semibold tabular-nums tracking-wide font-mono">
             {formatDuration(isPreviewPlaying ? previewCurrentTime : previewDuration)}
           </span>
 

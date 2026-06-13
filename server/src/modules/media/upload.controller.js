@@ -1,6 +1,6 @@
 const cloudinary = require("../../config/cloudinary");
-
 const streamifier = require("streamifier");
+const path = require("path");
 
 /* =========================================================
    DETECT RESOURCE TYPE
@@ -26,21 +26,29 @@ const uploadToCloudinary = async (file) => {
   const resourceType = detectResourceType(file.mimetype);
 
   return new Promise((resolve, reject) => {
+    const parsedPath = path.parse(file.originalname);
+    const safeName = parsedPath.name.replace(/[^a-zA-Z0-9-_]/g, "_");
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    
+    // For raw resources, Cloudinary requires the extension in the public_id to serve it correctly.
+    // For images/videos, we should not include the extension in public_id because Cloudinary adds it automatically.
+    const publicId = resourceType === "raw" 
+      ? `${safeName}_${uniqueSuffix}${parsedPath.ext}`
+      : `${safeName}_${uniqueSuffix}`;
+
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: "vertex-connect",
 
         resource_type: resourceType,
 
+        public_id: publicId,
+
         /* =========================
                  PERFORMANCE
               ========================== */
 
         chunk_size: 6000000,
-
-        use_filename: true,
-
-        unique_filename: true,
 
         overwrite: false,
       },

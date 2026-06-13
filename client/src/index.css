@@ -3,35 +3,38 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg-sidebar: #f4f4f5;
-  /* zinc-100 */
-  --bg-sidebar-rail: #e4e4e7;
-  /* zinc-200 */
+  --bg-sidebar: #f8fafc;
+  /* slate-50: clean, premium slate background for sidebar */
+  --bg-sidebar-rail: #f1f5f9;
+  /* slate-100 */
   --bg-header: #ffffff;
   --bg-chat: #ffffff;
-  --bg-hover: #e4e4e7;
-  /* zinc-200 */
+  --bg-hover: #f1f5f9;
+  /* slate-100 */
   --bg-card: #ffffff;
-  --border-color: #e4e4e7;
-  --text-primary: #09090b;
-  /* zinc-950 */
-  --text-secondary: #71717a;
-  /* zinc-500 */
+  --border-color: #e2e8f0;
+  /* slate-200 */
+  --text-primary: #0f172a;
+  /* slate-900 */
+  --text-secondary: #64748b;
+  /* slate-500 */
   --bubble-incoming: #f1f5f9;
-  /* Slate 100 - very soft slate */
+  /* slate-100 - very soft slate */
 
-  /* Premium Teal & Soft Green theme for Light Mode (no harsh blue) */
-  --brand-color: #0f766e;
-  /* Teal-700: sophisticated, premium organic teal/green */
-  --bubble-outgoing: #d9fdd3;
-  /* Soft green for excellent readability */
-  --text-outgoing: #111b21;
-  /* Dark green-black for high contrast text */
-  --read-receipt: #00bfa5;
-  /* Teal receipt checkmarks */
+  /* Premium Obsidian-Indigo theme for Light Mode */
+  --brand-color: #4f46e5;
+  /* Indigo-600: modern, vibrant brand color */
+  --bubble-outgoing: #e0e7ff;
+  /* Indigo-100: premium soft indigo bubble */
+  --text-outgoing: #312e81;
+  /* Dark Indigo-900 for a calm, professional look */
+  --read-receipt: #6366f1;
+  /* Indigo-500: elegant checkmarks */
 
-  --bg-input: #f4f4f5;
-  --bg-active: #e4e4e7;
+  --bg-input: #f1f5f9;
+  /* slate-100 */
+  --bg-active: #e2e8f0;
+  /* slate-200 */
   --text-inverse: #ffffff;
   --bg-drawer: #ffffff;
   --bg-modal: #ffffff;
@@ -99,6 +102,35 @@
   --color-app-text-inverse: var(--text-inverse);
   --color-app-drawer: var(--bg-drawer);
   --color-app-modal: var(--bg-modal);
+
+  --animate-slide-in: slide-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-out: slide-out 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 0.2s ease-out;
+
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes slide-out {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 /* Custom Scrollbars */
@@ -120,7 +152,7 @@
   background: rgba(120, 120, 120, 0.4);
 }
 
-/* Muted WhatsApp doodle pattern */
+/* Premium radial dot grid pattern */
 .whatsapp-pattern {
   position: absolute;
   inset: 0;
@@ -145,6 +177,65 @@
   filter: none;
   mix-blend-mode: screen;
   opacity: 0.03;
+}
+
+/* Premium desaturated, professional bubble designs */
+.premium-bubble-outgoing {
+  background: var(--bubble-outgoing);
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.premium-bubble-incoming {
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* In dark mode, adjust the premium bubble backgrounds */
+.dark .premium-bubble-outgoing {
+  background: var(--bubble-outgoing);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.dark .premium-bubble-incoming {
+  background: rgba(24, 24, 28, 0.85);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Premium drawer info cards */
+.premium-info-card {
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.01);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-info-card:hover {
+  border-color: rgba(79, 70, 229, 0.25);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px -8px rgba(79, 70, 229, 0.08), 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.dark .premium-info-card {
+  background: rgba(20, 20, 24, 0.85);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.15);
+}
+
+.dark .premium-info-card:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.18);
 }
 
 /* =========================================================

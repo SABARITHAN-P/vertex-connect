@@ -1,6 +1,6 @@
-/* eslint-disable no-unused-vars, react-hooks/set-state-in-effect, react-hooks/immutability, react-hooks/purity, react-hooks/exhaustive-deps */
+/* eslint-disable no-unused-vars, react-hooks/set-state-in-effect, react-hooks/immutability, react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef } from "react";
-import { X, Users, Image as ImageIcon, Calendar, Shield, Trash, LogOut, Check, Sparkles, Copy, AlertCircle, Plus, Clock, Camera, Edit2, Lock, File } from "lucide-react";
+import { X, Users, Image as ImageIcon, Calendar, Shield, Trash, LogOut, Check, Sparkles, Copy, AlertCircle, Plus, Clock, Camera, Edit2, Lock, File, Download } from "lucide-react";
 import api from "@services/api";
 import ImageEditorModal from "@components/features/media/ImageEditorModal";
 import { useEscapeKey } from "@hooks/useEscapeKey";
@@ -19,9 +19,96 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   const [selectedImageSrc, setSelectedImageSrc] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedMemberAction, setSelectedMemberAction] = useState(null);
+  const [downloadedUrls, setDownloadedUrls] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vertex_downloaded_files");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [mediaContextMenu, setMediaContextMenu] = useState(null);
+
+  useEffect(() => {
+    const handleFileDownloadedEvent = (e) => {
+      const downloadedUrl = e.detail;
+      setDownloadedUrls((prev) => {
+        if (!prev.includes(downloadedUrl)) {
+          return [...prev, downloadedUrl];
+        }
+        return prev;
+      });
+    };
+    const handleOutsideClick = () => {
+      setMediaContextMenu(null);
+    };
+    window.addEventListener("file-downloaded", handleFileDownloadedEvent);
+    window.addEventListener("click", handleOutsideClick);
+    return () => {
+      window.removeEventListener("file-downloaded", handleFileDownloadedEvent);
+      window.removeEventListener("click", handleOutsideClick);
+    };
+  }, []);
 
   // Centralized ESC key support: close sidebar on Escape. Priority: 5 (lower than modals)
   useEscapeKey(onClose, !isEditorOpen, 5);
+
+  const handleFileDownload = async (e, fileUrl, fileName) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      if (!fileUrl) {
+        alert("This file is not available for download.");
+        return;
+      }
+
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        if (response.status === 404) {
+          alert("File not found: This file does not exist on the server.");
+        } else {
+          alert(`Unable to download: Server returned error status ${response.status}.`);
+        }
+        return;
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName || "file";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+
+      // Record successful download locally
+      try {
+        const currentSaved = localStorage.getItem("vertex_downloaded_files");
+        const list = currentSaved ? JSON.parse(currentSaved) : [];
+        if (!list.includes(fileUrl)) {
+          list.push(fileUrl);
+          localStorage.setItem("vertex_downloaded_files", JSON.stringify(list));
+          window.dispatchEvent(new CustomEvent("file-downloaded", { detail: fileUrl }));
+        }
+      } catch (err) {
+        console.error("Error saving download status:", err);
+      }
+    } catch (error) {
+      console.error("Direct file download failed:", error);
+      let downloadUrl = fileUrl;
+      const isRaw = fileUrl.includes("/raw/");
+      if (!isRaw && fileUrl.includes("cloudinary.com") && fileUrl.includes("/upload/")) {
+        const parts = fileUrl.split("/upload/");
+        const cleanFileName = encodeURIComponent(fileName || "file").replace(/%20/g, "_");
+        downloadUrl = `${parts[0]}/upload/fl_attachment:${cleanFileName}/${parts[1]}`;
+      }
+      window.open(downloadUrl, "_blank");
+    }
+  };
   
   useEffect(() => {
     setGroupName(chat.chatName);
@@ -494,13 +581,13 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
       <div className="flex-1 overflow-y-auto">
         {/* GROUP HEADER METADATA */}
         <div className="flex flex-col items-center py-6 px-4 bg-app-header/20 border-b border-app-border">
-          <div 
+          <div
             onClick={() => {
-              if (canEditProfilePhoto() && !avatarLoading) {
+              if (canEditProfilePhoto()) {
                 groupFileRef.current?.click();
               }
             }}
-            className={`relative group w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-brand border-2 border-brand/40 hover:border-white transition-all ${
+            className={`relative group w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-black/5 dark:bg-white/5 border-2 border-gray-200/50 transition-all ${
               canEditProfilePhoto() ? "cursor-pointer" : ""
             }`}
           >
@@ -508,10 +595,10 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
               <img
                 src={chat.groupAvatar}
                 alt="Group Avatar"
-                className="w-full h-full object-cover group-hover:opacity-40 transition-opacity"
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
             ) : (
-              <span className="text-white text-3xl font-bold group-hover:opacity-40 transition-opacity">
+              <span className="text-app-text-primary text-3xl font-bold transition-transform duration-300 group-hover:scale-105">
                 {chat.chatName ? chat.chatName.charAt(0).toUpperCase() : "G"}
               </span>
             )}
@@ -519,7 +606,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
             {/* ADMIN HOVER CAMERA OVERLAY */}
             {canEditProfilePhoto() && (
               <div
-                className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center px-1"
+                className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center px-1"
                 title="Change Group Photo"
               >
                 <Camera size={20} className="text-white animate-pulse" />
@@ -563,35 +650,40 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
 
           {/* GROUP NAME EDIT ZONE */}
           {isEditingName ? (
-            <div className="flex items-center gap-1.5 mt-3 border-b border-brand pb-1 w-full max-w-[280px]">
+            <div className="mt-3 w-full max-w-[280px] flex flex-col gap-2">
               <input
                 type="text"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 maxLength={25}
-                className="bg-transparent text-white font-semibold text-base outline-none w-full text-center"
+                className="w-full bg-white dark:bg-zinc-900 border border-brand/50 rounded-xl px-3 py-2 text-sm text-center text-app-text-primary font-semibold outline-none focus:border-brand shadow-sm transition"
                 autoFocus
               />
-              <button onClick={handleSaveGroupName} className="text-gray-400 hover:text-white transition">
-                <Check size={18} className="text-brand" />
-              </button>
-              <button
-                onClick={() => {
-                  setGroupName(chat.chatName);
-                  setIsEditingName(false);
-                }}
-                className="text-gray-400 hover:text-white transition"
-              >
-                <X size={18} className="text-red-400" />
-              </button>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => {
+                    setGroupName(chat.chatName);
+                    setIsEditingName(false);
+                  }}
+                  className="px-3 py-1 rounded-lg border border-app-border text-app-text-secondary hover:text-app-text-primary text-[10px] font-bold uppercase tracking-wider transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveGroupName}
+                  className="px-3 py-1 rounded-lg bg-brand hover:bg-brand/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm transition"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2 mt-3 justify-center">
-              <h1 className="text-white text-lg font-semibold text-center">{chat.chatName}</h1>
+              <h1 className="text-app-text-primary text-lg font-semibold text-center">{chat.chatName}</h1>
               {canEditGroupInfo() && (
                 <button
                   onClick={() => setIsEditingName(true)}
-                  className="text-gray-400 hover:text-white p-1 hover:bg-[#111b21] rounded-full transition"
+                  className="text-app-text-secondary hover:text-app-text-primary p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition"
                 >
                   <Edit2 size={13} />
                 </button>
@@ -599,36 +691,42 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
             </div>
           )}
 
-          <p className="text-gray-400 text-xs mt-1 text-center font-semibold tracking-wide">
+          <p className="text-app-text-secondary text-xs mt-1 text-center font-semibold tracking-wide">
             {chat.roles?.filter((r) => r.role !== "left")?.length || 0} members
           </p>
-          <p className="text-gray-500 text-[10px] mt-1 text-center font-medium">
+          <p className="text-app-text-secondary/80 text-[10px] mt-1 text-center font-medium">
             Created on {chat.createdAt ? new Date(chat.createdAt).toLocaleDateString("en-US", { day: 'numeric', month: 'short', year: 'numeric' }) : "Recently"} • by {chat.creator?.username || "Admin"}
           </p>
 
           {/* GROUP DESCRIPTION EDIT ZONE */}
           {isEditingDesc ? (
-            <div className="flex items-center gap-1.5 mt-3 border-b border-brand pb-1 w-full px-4">
+            <div className="mt-3.5 w-full max-w-[340px] flex flex-col gap-2 p-3 premium-info-card rounded-2xl border border-brand/30">
               <textarea
                 value={groupDesc}
                 onChange={(e) => setGroupDesc(e.target.value)}
                 maxLength={200}
-                rows={2}
-                className="bg-transparent text-gray-300 text-xs outline-none w-full resize-none italic text-center"
+                rows={3}
+                placeholder="Write group description..."
+                className="w-full bg-white dark:bg-zinc-900 border border-app-border rounded-xl p-2.5 text-xs text-app-text-primary outline-none focus:border-brand/60 resize-none italic shadow-sm transition"
                 autoFocus
               />
-              <button onClick={handleSaveGroupDesc} className="text-gray-400 hover:text-white transition self-end pb-1">
-                <Check size={18} className="text-brand" />
-              </button>
-              <button
-                onClick={() => {
-                  setGroupDesc(chat.groupDescription || "");
-                  setIsEditingDesc(false);
-                }}
-                className="text-gray-400 hover:text-white transition self-end pb-1"
-              >
-                <X size={18} className="text-red-400" />
-              </button>
+              <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                <button
+                  onClick={() => {
+                    setGroupDesc(chat.groupDescription || "");
+                    setIsEditingDesc(false);
+                  }}
+                  className="px-2.5 py-1 rounded-lg border border-app-border text-app-text-secondary hover:text-app-text-primary text-[10px] font-bold uppercase tracking-wider transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveGroupDesc}
+                  className="px-3 py-1 rounded-lg bg-brand hover:bg-brand/90 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm transition"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           ) : (
             <div 
@@ -637,11 +735,11 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                   setIsEditingDesc(true);
                 }
               }}
-              className={`flex items-start gap-2 mt-3 bg-app-modal px-4 py-2.5 rounded-lg w-full justify-center border border-app-border ${
-                canEditGroupInfo() ? "cursor-pointer hover:border-brand/40" : ""
-              } transition-colors`}
+              className={`flex items-start gap-2.5 mt-3.5 px-4 py-3 rounded-2xl w-full max-w-[340px] justify-center premium-info-card hover:bg-black/5 dark:hover:bg-white/5 border border-app-border/40 ${
+                canEditGroupInfo() ? "cursor-pointer hover:border-brand/30" : ""
+              } transition-all duration-200`}
             >
-              <p className="text-gray-300 text-xs text-center italic leading-relaxed break-words max-w-[90%]">
+              <p className="text-app-text-secondary text-xs text-center italic leading-relaxed break-words max-w-[85%] font-medium">
                 {chat.groupDescription ? `"${chat.groupDescription}"` : "No group description provided"}
               </p>
               {canEditGroupInfo() && (
@@ -650,9 +748,9 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                     e.stopPropagation();
                     setIsEditingDesc(true);
                   }}
-                  className="text-gray-400 hover:text-white p-1 hover:bg-[#202c33] rounded-full transition shrink-0"
+                  className="text-app-text-secondary hover:text-app-text-primary p-0.5 hover:scale-110 transition duration-150 shrink-0 self-center"
                 >
-                  <Edit2 size={13} />
+                  <Edit2 size={12} />
                 </button>
               )}
             </div>
@@ -678,7 +776,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
           <button
             onClick={() => setActiveTab("members")}
             className={`flex-1 min-w-[70px] py-2.5 text-[10px] font-bold tracking-wider uppercase border-b-2 transition ${
-              activeTab === "members" ? "border-brand text-brand" : "border-transparent text-gray-400 hover:text-white"
+              activeTab === "members" ? "border-brand text-brand" : "border-transparent text-app-text-secondary hover:text-app-text-primary"
             }`}
           >
             Members
@@ -686,7 +784,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
           <button
             onClick={() => setActiveTab("rules")}
             className={`flex-1 min-w-[70px] py-2.5 text-[10px] font-bold tracking-wider uppercase border-b-2 transition ${
-              activeTab === "rules" ? "border-brand text-brand" : "border-transparent text-gray-400 hover:text-white"
+              activeTab === "rules" ? "border-brand text-brand" : "border-transparent text-app-text-secondary hover:text-app-text-primary"
             }`}
           >
             Rules
@@ -694,7 +792,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
           <button
             onClick={() => setActiveTab("media")}
             className={`flex-1 min-w-[70px] py-2.5 text-[10px] font-bold tracking-wider uppercase border-b-2 transition ${
-              activeTab === "media" ? "border-brand text-brand" : "border-transparent text-gray-400 hover:text-white"
+              activeTab === "media" ? "border-brand text-brand" : "border-transparent text-app-text-secondary hover:text-app-text-primary"
             }`}
           >
             Media
@@ -708,26 +806,26 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
             <div className="space-y-4 animate-fade-in">
               {/* ADD MEMBER SECTION */}
               {canAddMembers() && (
-                <div className="space-y-3 bg-app-header/20 border border-app-border rounded-xl p-3.5">
-                  <h3 className="text-white text-xs font-bold uppercase tracking-wider">Add Members</h3>
+                <div className="space-y-3 premium-info-card rounded-2xl p-4">
+                  <h3 className="text-app-text-secondary text-[10px] font-bold uppercase tracking-wider">Add Members</h3>
                   <input
                     type="text"
                     id="add-member-search-input"
                     placeholder="Search users to add..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-app-input border border-app-border rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand transition"
+                    className="w-full bg-white dark:bg-zinc-900 border border-app-border rounded-xl px-3.5 py-2.5 text-xs text-app-text-primary placeholder-app-text-secondary outline-none focus:border-brand transition shadow-sm"
                   />
                   
                   {/* Selected Users Pill Container */}
                   {selectedUsersToAdd.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 p-1.5 bg-app-modal/40 rounded-lg max-h-[80px] overflow-y-auto">
+                    <div className="flex flex-wrap gap-1.5 p-2 bg-black/5 dark:bg-white/5 border border-app-border rounded-xl max-h-[80px] overflow-y-auto">
                       {selectedUsersToAdd.map((u) => (
-                        <div key={u._id} className="flex items-center gap-1 bg-brand/20 border border-brand/40 px-2 py-0.5 rounded-full text-[10px] text-white">
+                        <div key={u._id} className="flex items-center gap-1 bg-brand/10 border border-brand/30 px-2 py-0.5 rounded-full text-[10px] text-brand dark:text-white">
                           <span>@{u.username}</span>
                           <button
                             onClick={() => setSelectedUsersToAdd(prev => prev.filter(x => x._id !== u._id))}
-                            className="text-red-400 hover:text-red-300 font-bold shrink-0 ml-0.5"
+                            className="text-red-500 hover:text-red-400 font-bold shrink-0 ml-0.5"
                           >
                             ×
                           </button>
@@ -737,7 +835,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                   )}
 
                   {searchInviteResults.length > 0 && (
-                    <div className="bg-[#202c33]/40 border border-[#222d34] rounded-lg p-1.5 max-h-[160px] overflow-y-auto">
+                    <div className="bg-white dark:bg-zinc-900 border border-app-border rounded-xl p-2 max-h-[160px] overflow-y-auto shadow-sm">
                       {searchInviteResults.map((user) => {
                         const isSelected = selectedUsersToAdd.some(x => x._id === user._id);
                         return (
@@ -754,7 +852,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                               isSelected ? "bg-brand/10" : ""
                             }`}
                           >
-                            <span className="text-xs text-white">@{user.username}</span>
+                            <span className="text-xs text-app-text-primary">@{user.username}</span>
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
                               isSelected ? "bg-brand border-brand" : "border-gray-500"
                             }`}>
@@ -770,7 +868,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                     <button
                       onClick={handleAddSelectedMembers}
                       disabled={loading}
-                      className="w-full py-2 bg-brand hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-md mt-1 rounded-lg"
+                      className="w-full py-2.5 bg-brand hover:bg-brand/90 text-white text-xs font-bold uppercase tracking-wider transition shadow-sm mt-1 rounded-xl"
                     >
                       Confirm & Add {selectedUsersToAdd.length} Member(s)
                     </button>
@@ -780,8 +878,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
 
               {/* MEMBERS LIST */}
               <div className="space-y-2">
-                <h3 className="text-white text-xs font-bold uppercase tracking-wider">Group Members</h3>
-                <div className="space-y-1.5">
+                <h3 className="text-app-text-secondary text-[10px] font-bold uppercase tracking-wider pl-1">Group Members</h3>
+                <div className="premium-info-card rounded-2xl divide-y divide-app-border/40 overflow-hidden">
                   {chat.roles?.filter((r) => r.role !== "left")?.map((memberObj) => {
                     const memberUser = typeof memberObj.user === "object" && memberObj.user !== null && memberObj.user.username
                       ? memberObj.user
@@ -800,7 +898,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                     return (
                       <div
                         key={memberUser._id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-[#202c33]/20 border border-[#222d34]/40 hover:bg-[#202c33]/40 transition cursor-pointer"
+                        className="flex items-center justify-between p-3.5 hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
                         onClick={() => {
                           setSelectedMemberAction({ memberUser, memberObj });
                         }}
@@ -825,20 +923,20 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                             )}
                           </div>
                           <div>
-                            <span className="text-xs text-white font-medium flex items-center gap-1.5">
-                              {memberUser.username} {isSelf && <span className="text-[10px] text-gray-400 font-normal">(you)</span>}
+                            <span className="text-xs text-app-text-primary font-medium flex items-center gap-1.5">
+                              {memberUser.username} {isSelf && <span className="text-[10px] text-app-text-secondary font-normal">(you)</span>}
                             </span>
                             {memberObj.role === "owner" && (
                               <span className="text-[10px] text-brand bg-brand/10 border border-brand/30 px-1.5 py-0.5 rounded-full font-bold tracking-wide uppercase mt-1 inline-block">Leader</span>
                             )}
                             {memberObj.role === "admin" && (
-                              <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold tracking-wide uppercase mt-1 inline-block">Admin</span>
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold tracking-wide uppercase mt-1 inline-block">Admin</span>
                             )}
                           </div>
                         </div>
 
                         {canManage && (
-                          <span className="text-gray-400 hover:text-white px-2.5 py-1 bg-[#111b21]/60 hover:bg-[#111b21] border border-[#222d34] rounded-lg transition text-[10px] font-bold uppercase tracking-wider">
+                          <span className="text-app-text-secondary hover:text-app-text-primary px-2.5 py-1 bg-black/5 dark:bg-white/5 border border-app-border rounded-lg transition text-[10px] font-bold uppercase tracking-wider">
                             Options
                           </span>
                         )}
@@ -858,7 +956,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                       inputEl.focus();
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-brand hover:opacity-95 text-white text-xs font-bold tracking-wider uppercase transition mt-4 shadow-md border border-brand/30 hover:shadow-lg hover:scale-[1.01]"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand hover:bg-brand/90 text-white text-xs font-bold tracking-wider uppercase transition mt-4 shadow-sm hover:scale-[1.01] duration-200"
                 >
                   <Plus size={15} />
                   <span>Add participant +</span>
@@ -870,7 +968,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                 {userRole === "left" ? (
                   <button
                     onClick={handleLeaveGroup}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold tracking-wider uppercase transition shadow-md border border-red-700 hover:shadow-lg hover:scale-[1.01]"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold tracking-wider uppercase transition shadow-sm hover:scale-[1.01] duration-200"
                   >
                     <Trash size={14} />
                     <span>Delete Group Chat</span>
@@ -879,7 +977,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                   <>
                     <button
                       onClick={handleLeaveGroup}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold tracking-wider uppercase transition shadow-sm"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 text-xs font-semibold tracking-wider uppercase transition"
                     >
                       <LogOut size={14} />
                       <span>Exit Group</span>
@@ -887,7 +985,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
 
                     <button
                       onClick={handleLeaveAndDeleteGroup}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold tracking-wider uppercase transition shadow-md border border-red-700 hover:shadow-lg hover:scale-[1.01]"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold tracking-wider uppercase transition shadow-sm hover:scale-[1.01] duration-200"
                     >
                       <Trash size={14} />
                       <span>Exit & Delete Group</span>
@@ -908,15 +1006,15 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                 </div>
               )}
 
-              <div className="bg-[#202c33]/40 border border-[#222d34] rounded-xl p-4 space-y-4">
+              <div className="premium-info-card rounded-2xl p-5 space-y-5">
                 {/* Edit Group Info Rule */}
                 <div className="space-y-2">
-                  <label className="text-white text-xs font-bold uppercase tracking-wider">Who can edit group info?</label>
+                  <label className="text-app-text-secondary text-[10px] font-bold uppercase tracking-wider pl-1">Who can edit group info?</label>
                   <select
                     disabled={!isOwner}
                     value={editGroupInfoRule}
                     onChange={(e) => setEditGroupInfoRule(e.target.value)}
-                    className="w-full bg-app-input border border-app-border disabled:opacity-60 disabled:cursor-not-allowed rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand transition"
+                    className="w-full bg-white dark:bg-zinc-900 border border-app-border disabled:opacity-60 disabled:cursor-not-allowed rounded-xl px-3.5 py-2.5 text-xs text-app-text-primary outline-none focus:border-brand transition shadow-sm"
                   >
                     <option value="everyone">Everyone</option>
                     <option value="admins">Leader and Admins</option>
@@ -926,12 +1024,12 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
 
                 {/* Edit Profile Photo Rule */}
                 <div className="space-y-2">
-                  <label className="text-white text-xs font-bold uppercase tracking-wider">Who can change profile photo?</label>
+                  <label className="text-app-text-secondary text-[10px] font-bold uppercase tracking-wider pl-1">Who can change profile photo?</label>
                   <select
                     disabled={!isOwner}
                     value={editProfilePhotoRule}
                     onChange={(e) => setEditProfilePhotoRule(e.target.value)}
-                    className="w-full bg-app-input border border-app-border disabled:opacity-60 disabled:cursor-not-allowed rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand transition"
+                    className="w-full bg-white dark:bg-zinc-900 border border-app-border disabled:opacity-60 disabled:cursor-not-allowed rounded-xl px-3.5 py-2.5 text-xs text-app-text-primary outline-none focus:border-brand transition shadow-sm"
                   >
                     <option value="everyone">Everyone</option>
                     <option value="admins">Leader and Admins</option>
@@ -941,12 +1039,12 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
 
                 {/* Add Members Rule */}
                 <div className="space-y-2">
-                  <label className="text-white text-xs font-bold uppercase tracking-wider">Who can add members?</label>
+                  <label className="text-app-text-secondary text-[10px] font-bold uppercase tracking-wider pl-1">Who can add members?</label>
                   <select
                     disabled={!isOwner}
                     value={addMembersRule}
                     onChange={(e) => setAddMembersRule(e.target.value)}
-                    className="w-full bg-app-input border border-app-border disabled:opacity-60 disabled:cursor-not-allowed rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand transition"
+                    className="w-full bg-white dark:bg-zinc-900 border border-app-border disabled:opacity-60 disabled:cursor-not-allowed rounded-xl px-3.5 py-2.5 text-xs text-app-text-primary outline-none focus:border-brand transition shadow-sm"
                   >
                     <option value="everyone">Everyone</option>
                     <option value="admins">Leader and Admins</option>
@@ -958,7 +1056,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                   <button
                     onClick={handleSaveRules}
                     disabled={loading}
-                    className="w-full bg-brand hover:opacity-95 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white transition shadow-md flex items-center justify-center gap-1.5 mt-2 hover:scale-[1.01]"
+                    className="w-full bg-brand hover:bg-brand/90 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition shadow-sm flex items-center justify-center gap-1.5 mt-2 hover:scale-[1.01] duration-200"
                   >
                     <Check size={14} />
                     <span>Save Rules & Settings</span>
@@ -971,13 +1069,13 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
           {/* MEDIA TAB */}
           {activeTab === "media" && (
             <div className="space-y-4 animate-fade-in">
-              <div className="flex border border-[#222d34] rounded-lg overflow-hidden">
+              <div className="flex border border-app-border rounded-lg overflow-hidden">
                 {["images", "videos", "documents"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setMediaTab(tab)}
                     className={`flex-1 py-1.5 text-[10px] uppercase font-bold tracking-wider transition ${
-                      mediaTab === tab ? "bg-brand text-white" : "bg-app-header/40 text-gray-400 hover:text-white"
+                      mediaTab === tab ? "bg-brand text-white" : "bg-app-header/40 text-app-text-secondary hover:text-app-text-primary"
                     }`}
                   >
                     {tab}
@@ -986,9 +1084,9 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
               </div>
 
               {loading ? (
-                <div className="text-center text-xs text-gray-400 py-10">Fetching Media...</div>
+                <div className="text-center text-xs text-app-text-secondary py-10">Fetching Media...</div>
               ) : getFilteredMedia().length === 0 ? (
-                <div className="text-center text-xs text-gray-400 py-10 bg-[#202c33]/10 border border-[#222d34]/60 border-dashed rounded-lg">
+                <div className="text-center text-xs text-app-text-secondary py-10 bg-black/5 dark:bg-white/5 border border-app-border border-dashed rounded-lg">
                   No {mediaTab} shared yet
                 </div>
               ) : (
@@ -998,26 +1096,73 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                     return files.map((file, i) => {
                       if (mediaTab === "images") {
                         return (
-                          <a href={file.url} target="_blank" rel="noreferrer" key={`${msg._id}-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border border-[#222d34] bg-black">
+                          <a 
+                            href={file.url} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setMediaContextMenu({
+                                x: e.clientX,
+                                y: e.clientY,
+                                msgId: msg._id,
+                                senderId: msg.sender?._id || msg.sender
+                              });
+                            }}
+                            key={`${msg._id}-${i}`} 
+                            className="relative group aspect-square rounded-lg overflow-hidden border border-app-border bg-black"
+                          >
                             <img src={file.url} alt="Media" className="w-full h-full object-cover hover:scale-110 transition duration-300" />
                           </a>
                         );
                       }
                       if (mediaTab === "videos") {
                         return (
-                          <a href={file.url} target="_blank" rel="noreferrer" key={`${msg._id}-${i}`} className="relative aspect-square rounded-lg overflow-hidden border border-[#222d34] bg-black flex items-center justify-center">
-                            <span className="text-[10px] text-gray-400 font-semibold uppercase">Video</span>
+                          <a 
+                            href={file.url} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setMediaContextMenu({
+                                x: e.clientX,
+                                y: e.clientY,
+                                msgId: msg._id,
+                                senderId: msg.sender?._id || msg.sender
+                              });
+                            }}
+                            key={`${msg._id}-${i}`} 
+                            className="relative aspect-square rounded-lg overflow-hidden border border-app-border bg-black flex items-center justify-center"
+                          >
+                            <span className="text-[10px] text-app-text-secondary font-semibold uppercase">Video</span>
                           </a>
                         );
                       }
                       return (
-                        <a href={file.url} target="_blank" rel="noreferrer" key={`${msg._id}-${i}`} className="col-span-3 flex items-center gap-2.5 p-2 bg-[#202c33]/30 border border-[#222d34] rounded-lg hover:bg-[#202c33]/50 transition">
-                          <div className="w-8 h-8 rounded bg-[#111b21] flex items-center justify-center text-gray-400">
-                            <File size={16} className="text-gray-400" />
+                        <a 
+                          href={file.url} 
+                          onClick={(e) => handleFileDownload(e, file.url, file.fileName || "document.pdf")}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setMediaContextMenu({
+                              x: e.clientX,
+                              y: e.clientY,
+                              msgId: msg._id,
+                              senderId: msg.sender?._id || msg.sender
+                            });
+                          }}
+                          key={`${msg._id}-${i}`} 
+                          className="col-span-3 flex items-center gap-2.5 p-2.5 premium-info-card rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition"
+                        >
+                          <div className="w-8 h-8 rounded bg-black/10 dark:bg-black/40 flex items-center justify-center text-app-text-secondary">
+                            <File size={16} className="text-app-text-secondary" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs text-white font-medium truncate">{file.fileName || "document.pdf"}</div>
-                            <div className="text-[10px] text-gray-400 mt-0.5">shared by {msg.sender?.username}</div>
+                            <div className="text-xs text-app-text-primary font-medium truncate">{file.fileName || "document.pdf"}</div>
+                            <div className="text-[10px] text-app-text-secondary mt-0.5">shared by {msg.sender?.username}</div>
                           </div>
                         </a>
                       );
@@ -1058,10 +1203,10 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                   <span className="font-bold text-base">{selectedMemberAction.memberUser.username[0].toUpperCase()}</span>
                 )}
               </div>
-              <span className="text-white text-xs font-bold">@{selectedMemberAction.memberUser.username}</span>
+              <span className="text-app-text-primary text-xs font-bold">@{selectedMemberAction.memberUser.username}</span>
               {selectedMemberAction.memberObj.role !== "member" && (
                 <span className={`text-[9px] font-extrabold uppercase tracking-widest mt-1.5 px-2 py-0.5 rounded-full ${
-                  selectedMemberAction.memberObj.role === "owner" ? "text-brand bg-brand/10 border border-brand/30" : "text-amber-400 bg-amber-500/10 border border-amber-500/30"
+                  selectedMemberAction.memberObj.role === "owner" ? "text-brand bg-brand/10 border border-brand/30" : "text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30"
                 }`}>
                   {selectedMemberAction.memberObj.role === "owner" ? "Leader" : "Admin"}
                 </span>
@@ -1098,7 +1243,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                     await handleRoleChange(selectedMemberAction.memberUser._id, "member");
                     setSelectedMemberAction(null);
                   }}
-                  className="w-full py-2 hover:bg-amber-500/10 rounded-lg text-xs font-bold text-amber-400 transition"
+                  className="w-full py-2 hover:bg-amber-500/10 rounded-lg text-xs font-bold text-amber-600 dark:text-amber-400 transition"
                 >
                   Dismiss as Admin
                 </button>
@@ -1128,7 +1273,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                       setSelectedMemberAction(null);
                     }
                   }}
-                  className="w-full py-2 hover:bg-red-500/15 rounded-lg text-xs font-bold text-red-400 transition border-t border-red-500/10"
+                  className="w-full py-2 hover:bg-red-500/15 rounded-lg text-xs font-bold text-red-500 dark:text-red-400 transition border-t border-red-500/10"
                 >
                   Remove from Group
                 </button>
@@ -1143,6 +1288,84 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {mediaContextMenu && (
+        <div
+          style={{
+            position: "fixed",
+            top: mediaContextMenu.y,
+            left: mediaContextMenu.x,
+            zIndex: 99999,
+          }}
+          className="bg-app-modal border border-app-border rounded-xl shadow-2xl py-1 text-xs text-app-text-primary w-40 select-none animate-fade-in overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {(mediaContextMenu.senderId === currentUser.id || mediaContextMenu.senderId === currentUser._id || isAdmin) ? (
+            <>
+              <button
+                onClick={async () => {
+                  const msgId = mediaContextMenu.msgId;
+                  setMediaContextMenu(null);
+                  if (confirm("Are you sure you want to delete this message and its attachment for everyone?")) {
+                    try {
+                      await api.delete(`/message/${msgId}`, { data: { deleteType: "forEveryone" } });
+                      setMediaFiles(prev => prev.filter(m => m._id !== msgId));
+                      showFeedback(setSuccess, "Media deleted successfully");
+                    } catch (err) {
+                      console.error("Failed to delete media:", err);
+                      showFeedback(setError, "Failed to delete media");
+                    }
+                  }
+                }}
+                className="w-full text-left px-3 py-2.5 hover:bg-red-500/10 text-red-500 flex items-center gap-2 transition font-medium"
+              >
+                <Trash size={13} className="text-red-500" />
+                <span>Delete for everyone</span>
+              </button>
+              <button
+                onClick={async () => {
+                  const msgId = mediaContextMenu.msgId;
+                  setMediaContextMenu(null);
+                  if (confirm("Are you sure you want to delete this attachment for you?")) {
+                    try {
+                      await api.delete(`/message/${msgId}`, { data: { deleteType: "forMe" } });
+                      setMediaFiles(prev => prev.filter(m => m._id !== msgId));
+                      showFeedback(setSuccess, "Media deleted locally");
+                    } catch (err) {
+                      console.error("Failed to delete media locally:", err);
+                      showFeedback(setError, "Failed to delete media");
+                    }
+                  }
+                }}
+                className="w-full text-left px-3 py-2.5 hover:bg-red-500/10 text-red-400 flex items-center gap-2 transition font-medium border-t border-app-border/40"
+              >
+                <Trash size={13} className="text-red-400" />
+                <span>Delete for me</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={async () => {
+                const msgId = mediaContextMenu.msgId;
+                setMediaContextMenu(null);
+                if (confirm("Are you sure you want to delete this attachment for you?")) {
+                  try {
+                    await api.delete(`/message/${msgId}`, { data: { deleteType: "forMe" } });
+                    setMediaFiles(prev => prev.filter(m => m._id !== msgId));
+                    showFeedback(setSuccess, "Media deleted locally");
+                  } catch (err) {
+                    console.error("Failed to delete media locally:", err);
+                    showFeedback(setError, "Failed to delete media");
+                  }
+                }
+              }}
+              className="w-full text-left px-3 py-2.5 hover:bg-red-500/10 text-red-400 flex items-center gap-2 transition font-medium"
+            >
+              <Trash size={13} className="text-red-400" />
+              <span>Delete for me</span>
+            </button>
+          )}
         </div>
       )}
     </div>

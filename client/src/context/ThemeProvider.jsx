@@ -203,7 +203,7 @@ export const ThemeProvider = ({ children }) => {
       return {
         backgroundStyle: {
           ...baseStyle,
-          backgroundColor: activeTheme === "dark" ? "#09090b" : "#efeae2",
+          backgroundColor: activeTheme === "dark" ? "#09090b" : "#f8fafc",
         },
         overlayStyle,
         className: "whatsapp-pattern",
