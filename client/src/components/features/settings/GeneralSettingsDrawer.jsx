@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@context/ThemeContext";
 import { useEscapeKey } from "@hooks/useEscapeKey";
+import { premiumConfirm } from "@utils/alert";
 
 function GeneralSettingsDrawer({ onClose }) {
   const {
@@ -92,7 +93,12 @@ function GeneralSettingsDrawer({ onClose }) {
   };
 
   const handleResetCache = async () => {
-    if (confirm("Are you sure you want to reset all configurations to factory defaults? This clears cached preferences and reloads the window.")) {
+    const confirmed = await premiumConfirm(
+      "Restore Factory Settings",
+      "Are you sure you want to reset all configurations to factory defaults? This clears cached preferences and reloads the window.",
+      "warning"
+    );
+    if (confirmed) {
       try {
         await updateAppearance({
           themeMode: "dark",

@@ -3,6 +3,7 @@ import api from "@services/api";
 import { ArrowLeft, Sparkles, Sliders, Activity, Trash2, Cpu } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import toast from "react-hot-toast";
+import { premiumConfirm } from "@utils/alert";
 
 export default function AiSettingsDrawer({ onClose, conversation, onUpdateConversation, onClearHistory }) {
   const [models, setModels] = useState([]);
@@ -64,8 +65,9 @@ export default function AiSettingsDrawer({ onClose, conversation, onUpdateConver
     }
   };
 
-  const handleClearHistoryClick = () => {
-    if (confirm("Are you sure you want to clear all your AI conversations? This cannot be undone.")) {
+  const handleClearHistoryClick = async () => {
+    const confirmed = await premiumConfirm("Clear AI Chats", "Are you sure you want to clear all your AI conversations? This cannot be undone.", "warning");
+    if (confirmed) {
       onClearHistory();
     }
   };
@@ -113,7 +115,7 @@ export default function AiSettingsDrawer({ onClose, conversation, onUpdateConver
 
           {isCloud ? (
             <p className="text-xs text-emerald-500 leading-normal mt-1 font-medium">
-              ✨ Connected to Gemini Cloud API. Zero setup or local resources required.
+              Connected to Gemini Cloud API. Zero setup or local resources required.
             </p>
           ) : !ollamaConnected ? (
             <p className="text-xs text-amber-500 leading-normal mt-1">

@@ -1,6 +1,6 @@
 import { Users } from "lucide-react";
 
-function ConversationItem({ user, unreadCount, onClick, isTyping, isActive }) {
+function ConversationItem({ user, unreadCount, isMarkedUnread, onClick, isTyping, isOnline, isActive }) {
   /* =========================
      LAST MESSAGE PREVIEW
   ========================== */
@@ -35,26 +35,26 @@ function ConversationItem({ user, unreadCount, onClick, isTyping, isActive }) {
         const file = media[0];
 
         if (file.type === "gif" || latest.messageType === "gif") {
-          return `${senderName}👾 GIF`;
+          return `${senderName}[GIF]`;
         }
 
         if (file.type === "sticker" || latest.messageType === "sticker") {
-          return `${senderName}✨ Sticker`;
+          return `${senderName}[Sticker]`;
         }
 
         if (file.mimeType?.startsWith("image") || file.type === "image") {
-          return `${senderName}📷 Image`;
+          return `${senderName}[Image]`;
         }
 
         if (file.mimeType?.startsWith("video") || file.type === "video") {
-          return `${senderName}🎥 Video`;
+          return `${senderName}[Video]`;
         }
 
         if (file.mimeType?.startsWith("audio") || file.type === "audio") {
-          return `${senderName}🎵 Audio`;
+          return `${senderName}[Audio]`;
         }
 
-        return `${senderName}📄 Document`;
+        return `${senderName}[Document]`;
       }
 
       /* MULTIPLE FILES */
@@ -72,29 +72,29 @@ function ConversationItem({ user, unreadCount, onClick, isTyping, isActive }) {
       );
 
       if (hasImage && !hasVideo && !hasAudio && !hasDocument) {
-        return `${senderName}📷 ${media.length} Images`;
+        return `${senderName}[Images: ${media.length}]`;
       }
 
       if (hasVideo && !hasImage && !hasAudio && !hasDocument) {
-        return `${senderName}🎥 ${media.length} Videos`;
+        return `${senderName}[Videos: ${media.length}]`;
       }
 
       if (hasAudio && !hasImage && !hasVideo && !hasDocument) {
-        return `${senderName}🎵 ${media.length} Audio files`;
+        return `${senderName}[Audio files: ${media.length}]`;
       }
 
       if (hasDocument && !hasImage && !hasVideo && !hasAudio) {
-        return `${senderName}📄 ${media.length} Documents`;
+        return `${senderName}[Documents: ${media.length}]`;
       }
 
-      return `${senderName}📁 ${media.length} Files`;
+      return `${senderName}[Files: ${media.length}]`;
     }
 
     /* =========================
        POLLS
     ========================== */
     if (latest.messageType === "poll") {
-      return `${senderName}📊 Poll: ${latest.poll?.question || ""}`;
+      return `${senderName}[Poll] ${latest.poll?.question || ""}`;
     }
 
     /* =========================
@@ -187,8 +187,8 @@ function ConversationItem({ user, unreadCount, onClick, isTyping, isActive }) {
         </div>
       </div>
 
-      {/* UNREAD COUNT */}
-      {unreadCount > 0 && (
+      {/* UNREAD COUNT OR MANUAL UNREAD DOT */}
+      {unreadCount > 0 ? (
         <div
           className="
             ml-3
@@ -208,7 +208,20 @@ function ConversationItem({ user, unreadCount, onClick, isTyping, isActive }) {
         >
           {unreadCount > 99 ? "99+" : unreadCount}
         </div>
-      )}
+      ) : isMarkedUnread ? (
+        <div
+          className="
+            ml-3
+            w-3
+            h-3
+            rounded-full
+            bg-brand
+            shadow-sm
+            animate-pulse
+          "
+          title="Marked as unread"
+        />
+      ) : null}
     </div>
   );
 }

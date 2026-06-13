@@ -92,7 +92,7 @@ function FollowRequestsDrawer({ onClose, onRequestCountChange }) {
             <div>
               <h3 className="text-app-text-primary font-semibold text-base">No pending requests</h3>
               <p className="text-app-text-secondary text-xs mt-1 leading-relaxed">
-                When private account follow requests are received, they will appear here. You're all caught up! ✨
+                When private account follow requests are received, they will appear here. You're all caught up!
               </p>
             </div>
           </div>

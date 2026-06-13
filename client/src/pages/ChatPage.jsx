@@ -94,6 +94,27 @@ function ChatPage() {
   }, [fetchAppearance]);
 
   useEffect(() => {
+    const currentUserId = currentUser?.id || currentUser?._id;
+    if (!currentUserId) {
+      document.title = "Vertex Connect";
+      return;
+    }
+    const totalUnread = chats
+      .filter((chat) => {
+        const isArchived = chat.archivedBy?.some(a => a.user.toString() === currentUserId);
+        const isLocked = chat.lockedBy?.some(l => l.user.toString() === currentUserId);
+        return !isArchived && !isLocked;
+      })
+      .reduce((sum, chat) => sum + (unreadCounts[chat._id] || 0), 0);
+
+    if (totalUnread > 0) {
+      document.title = `(${totalUnread}) Vertex Connect`;
+    } else {
+      document.title = "Vertex Connect";
+    }
+  }, [unreadCounts, chats, currentUser]);
+
+  useEffect(() => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
     /* USER SETUP */

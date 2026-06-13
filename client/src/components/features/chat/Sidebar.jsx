@@ -11,6 +11,7 @@ import CallsDrawer from "@components/features/calls/CallsDrawer";
 import toast from "react-hot-toast";
 import { socket } from "@socket/socket";
 import { useTheme } from "@context/ThemeContext";
+import { premiumConfirm, premiumAlert } from "@utils/alert";
 
 function Sidebar({
   selectedUser,
@@ -82,7 +83,12 @@ function Sidebar({
 
   const handleDeleteAiConversation = async (e, convId) => {
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this AI conversation?")) {
+    const confirmed = await premiumConfirm(
+      "Delete AI Chat",
+      "Are you sure you want to delete this AI conversation?",
+      "warning"
+    );
+    if (confirmed) {
       try {
         await api.delete(`/ai/conversations/${convId}`);
         setAiConversations(prev => prev.filter(c => c._id !== convId));
@@ -137,8 +143,6 @@ function Sidebar({
 
   // Context Menu & Deletion/Clearance State
   const [contextMenu, setContextMenu] = useState(null); // { x: number, y: number, chat: object }
-  const [modalType, setModalType] = useState(null); // 'delete' | 'clear'
-  const [selectedChatForAction, setSelectedChatForAction] = useState(null);
   const [pinnedChatIds, setPinnedChatIds] = useState(() => {
     return JSON.parse(localStorage.getItem("pinned_chats") || "[]");
   });
@@ -208,6 +212,26 @@ function Sidebar({
   }, []);
 
   const currentUserId = currentUser._id || currentUser.id;
+
+  const totalPrivateUnreads = useMemo(() => {
+    return chats
+      .filter((chat) => {
+        const isArchived = chat.archivedBy?.some(a => a.user.toString() === currentUserId);
+        const isLocked = chat.lockedBy?.some(l => l.user.toString() === currentUserId);
+        return !chat.isGroupChat && !isArchived && !isLocked;
+      })
+      .reduce((sum, chat) => sum + (unreadCounts?.[chat._id] || 0), 0);
+  }, [chats, unreadCounts, currentUserId]);
+
+  const totalGroupUnreads = useMemo(() => {
+    return chats
+      .filter((chat) => {
+        const isArchived = chat.archivedBy?.some(a => a.user.toString() === currentUserId);
+        const isLocked = chat.lockedBy?.some(l => l.user.toString() === currentUserId);
+        return chat.isGroupChat && !isArchived && !isLocked;
+      })
+      .reduce((sum, chat) => sum + (unreadCounts?.[chat._id] || 0), 0);
+  }, [chats, unreadCounts, currentUserId]);
 
   const archivedChatsCount = archivedChats.length;
   const lockedChatsCount = lockedChats.length;
@@ -305,13 +329,13 @@ function Sidebar({
         )
       );
 
-      toast.success(isPinned ? "📌 Chat pinned successfully" : "📌 Chat unpinned successfully");
+      toast.success(isPinned ? "Chat pinned successfully" : "Chat unpinned successfully");
     } catch (err) {
       console.error("Failed to pin chat:", err);
       if (err.response?.data?.message) {
-        toast.error(err.response.data.message);
+        premiumAlert("Pin Limit Reached", err.response.data.message, "warning");
       } else {
-        toast.error("Failed to toggle pin state");
+        premiumAlert("Error", "Failed to toggle pin state", "error");
       }
     }
     setContextMenu(null);
@@ -336,7 +360,7 @@ function Sidebar({
         return prev;
       });
 
-      toast.success(isArchived ? "📁 Chat archived successfully" : "📁 Chat unarchived successfully");
+      toast.success(isArchived ? "Chat archived successfully" : "Chat unarchived successfully");
     } catch (err) {
       console.error("Failed to archive chat:", err);
       toast.error("Failed to toggle archive state");
@@ -363,7 +387,7 @@ function Sidebar({
         )
       );
 
-      toast.success(isMarkedUnread ? "✓ Chat marked as unread" : "✓ Chat marked as read");
+      toast.success(isMarkedUnread ? "Chat marked as unread" : "Chat marked as read");
     } catch (err) {
       console.error("Mark unread error:", err);
       toast.error("Failed to toggle unread mark");
@@ -384,14 +408,14 @@ function Sidebar({
           ...prev,
           blockedUsers: (prev.blockedUsers || []).filter(id => id.toString() !== otherUser._id.toString())
         }));
-        toast.success(`✓ Unblocked ${otherUser.username}`);
+        toast.success(`Unblocked ${otherUser.username}`);
       } else {
         await api.post(`/user/block/${otherUser._id}`);
         setCurrentUser(prev => ({
           ...prev,
           blockedUsers: [...(prev.blockedUsers || []), otherUser._id]
         }));
-        toast.success(`🚫 Blocked ${otherUser.username}`);
+        toast.success(`Blocked ${otherUser.username}`);
       }
     } catch (err) {
       console.error("Toggle block error:", err);
@@ -400,61 +424,50 @@ function Sidebar({
     setContextMenu(null);
   };
 
-
-
-  const handleDeleteChatClick = (chat) => {
-    setSelectedChatForAction(chat);
-    setModalType("delete");
-    setContextMenu(null);
-  };
-
-  const handleClearChatClick = (chat) => {
-    setSelectedChatForAction(chat);
-    setModalType("clear");
-    setContextMenu(null);
-  };
-
-  const confirmDeleteChat = async () => {
-    if (!selectedChatForAction) return;
-    try {
-      const chatId = selectedChatForAction._id;
-      await api.delete(`/chat/${chatId}`);
-      
-      // Optimistically update local sidebar chats
-      setChats((prev) => prev.filter((c) => c._id !== chatId));
-
-      // If currently selected chat is the deleted one, clear selectedUser
-      if (selectedUser?.chatId === chatId) {
-        setSelectedUser(null);
+  const handleDeleteChat = async (chat) => {
+    const targetName = chat.isGroupChat
+      ? chat.chatName
+      : chat.participants.find((p) => p._id !== currentUserId)?.username || "User";
+    const confirmed = await premiumConfirm(
+      "Delete Chat?",
+      `Are you sure you want to delete this chat with "${targetName}"? This will remove the chat from your list and hide all messages for you. Other participants will not be affected.`,
+      "warning"
+    );
+    if (confirmed) {
+      try {
+        const chatId = chat._id;
+        await api.delete(`/chat/${chatId}`);
+        setChats((prev) => prev.filter((c) => c._id !== chatId));
+        if (selectedUser?.chatId === chatId) {
+          setSelectedUser(null);
+        }
+        toast.success("Chat deleted successfully");
+      } catch (err) {
+        console.error("Failed to delete chat:", err);
+        toast.error("Failed to delete chat");
       }
-
-      toast.success("🗑️ Chat deleted successfully");
-    } catch (err) {
-      console.error("Failed to delete chat:", err);
-      toast.error("Failed to delete chat");
-    } finally {
-      setModalType(null);
-      setSelectedChatForAction(null);
     }
+    setContextMenu(null);
   };
 
-  const confirmClearChat = async () => {
-    if (!selectedChatForAction) return;
-    try {
-      const chatId = selectedChatForAction._id;
-      await api.post(`/chat/clear/${chatId}`);
-
-      // Dispatch event to clear message list in active ChatWindow
-      window.dispatchEvent(new CustomEvent("chat-cleared", { detail: { chatId } }));
-
-      toast.success("🧹 Chat history cleared successfully");
-    } catch (err) {
-      console.error("Failed to clear chat:", err);
-      toast.error("Failed to clear chat");
-    } finally {
-      setModalType(null);
-      setSelectedChatForAction(null);
+  const handleClearChat = async (chat) => {
+    const confirmed = await premiumConfirm(
+      "Clear Chat?",
+      "Are you sure you want to clear all message history in this chat? This action will permanently clear all messages for you. Other participants will not be affected.",
+      "warning"
+    );
+    if (confirmed) {
+      try {
+        const chatId = chat._id;
+        await api.post(`/chat/clear/${chatId}`);
+        window.dispatchEvent(new CustomEvent("chat-cleared", { detail: { chatId } }));
+        toast.success("Chat history cleared successfully");
+      } catch (err) {
+        console.error("Failed to clear chat:", err);
+        toast.error("Failed to clear chat");
+      }
     }
+    setContextMenu(null);
   };
 
   const handleVerifyPasscode = async () => {
@@ -477,7 +490,7 @@ function Sidebar({
           )
         );
 
-        toast.success("🔒 Chat locked successfully");
+        toast.success("Chat locked successfully");
       } else if (type === "unlock") {
         await api.post(`/chat/unlock/${chat._id}`, { passcode: passcodeValue });
         sessionStorage.removeItem(`lock_passcode_${chat._id}`);
@@ -490,7 +503,7 @@ function Sidebar({
           )
         );
 
-        toast.success("🔓 Chat unlocked successfully");
+        toast.success("Chat unlocked successfully");
       } else if (type === "unlock-folder") {
         const firstLockedChat = chats.find(c => c.lockedBy?.some(l => l.user.toString() === currentUserId));
         if (firstLockedChat) {
@@ -504,17 +517,17 @@ function Sidebar({
               }
             });
           } catch {
-            toast.error("Incorrect security PIN");
+            premiumAlert("Access Denied", "Incorrect security PIN", "error");
             return;
           }
         }
         
         setShowLockedOnly(true);
-        toast.success("🔓 Folder unlocked successfully!");
+        toast.success("Folder unlocked successfully!");
       }
     } catch (err) {
       console.error("Passcode verification failed:", err);
-      toast.error(err.response?.data?.message || "Incorrect passcode");
+      premiumAlert("Access Denied", err.response?.data?.message || "Incorrect passcode", "error");
     } finally {
       setPasscodePrompt(null);
       setPasscodeValue("");
@@ -663,6 +676,11 @@ function Sidebar({
               title="Chats"
             >
               <MessageSquare size={20} />
+              {totalPrivateUnreads > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
+                  {totalPrivateUnreads > 99 ? "99+" : totalPrivateUnreads}
+                </span>
+              )}
             </button>
 
             {/* Groups Tab */}
@@ -680,6 +698,11 @@ function Sidebar({
               title="Groups"
             >
               <Users size={20} />
+              {totalGroupUnreads > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
+                  {totalGroupUnreads > 99 ? "99+" : totalGroupUnreads}
+                </span>
+              )}
             </button>
 
             {/* AI Assistant Tab */}
@@ -906,7 +929,6 @@ function Sidebar({
           // Unread Count
           const unreadCount = unreadCounts?.[chat._id] || 0;
           const hasManualUnread = chat.markedUnreadBy?.some(u => u.user.toString() === currentUserId);
-          const displayUnreadCount = unreadCount > 0 ? unreadCount : (hasManualUnread ? 1 : 0);
 
           // Typing status
           const isTyping = typingUsers?.[chat._id];
@@ -925,7 +947,8 @@ function Sidebar({
             >
               <ConversationItem
                 user={userObj}
-                unreadCount={displayUnreadCount}
+                unreadCount={unreadCount}
+                isMarkedUnread={hasManualUnread}
                 isTyping={isTyping}
                 isOnline={isOnline}
                 isActive={selectedUser?.chatId === chat._id}
@@ -1202,7 +1225,10 @@ function Sidebar({
 
           {/* Clear Chat */}
           <button
-            onClick={() => handleClearChatClick(contextMenu.chat)}
+            onClick={() => {
+              setContextMenu(null);
+              handleClearChat(contextMenu.chat);
+            }}
             className="w-full text-left px-4 py-2 hover:bg-app-hover text-amber-500 transition-colors flex items-center gap-3 border-t border-app-border mt-1 pt-1.5 cursor-pointer"
           >
             <Eraser size={16} className="text-amber-500 shrink-0" />
@@ -1211,53 +1237,15 @@ function Sidebar({
 
           {/* Delete Chat */}
           <button
-            onClick={() => handleDeleteChatClick(contextMenu.chat)}
+            onClick={() => {
+              setContextMenu(null);
+              handleDeleteChat(contextMenu.chat);
+            }}
             className="w-full text-left px-4 py-2 hover:bg-app-hover text-red-500 font-semibold border-t border-app-border mt-1 pt-2 transition-colors flex items-center gap-3 cursor-pointer"
           >
             <Trash2 size={16} className="text-red-500 shrink-0" />
             <span>Delete Chat</span>
           </button>
-        </div>
-      )}
-
-      {/* CONFIRMATION MODALS */}
-      {modalType && selectedChatForAction && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300">
-          <div className="bg-app-modal border border-app-border rounded-2xl w-[90%] max-w-md p-6 shadow-2xl animate-fade-in text-app-text-primary">
-            <h3 className="text-xl font-semibold text-app-text-primary mb-3">
-              {modalType === "delete" ? "Delete Chat?" : "Clear Chat?"}
-            </h3>
-            <p className="text-sm text-app-text-secondary leading-relaxed mb-6">
-              {modalType === "delete"
-                ? `Are you sure you want to delete this chat with "${
-                    selectedChatForAction.isGroupChat
-                      ? selectedChatForAction.chatName
-                      : selectedChatForAction.participants.find((p) => p._id !== currentUserId)?.username
-                  }"? This will remove the chat from your list and hide all messages for you. Other participants will not be affected.`
-                : `Are you sure you want to clear all message history in this chat? This action will permanently clear all messages for you. Other participants will not be affected.`}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setModalType(null);
-                  setSelectedChatForAction(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-transparent border border-app-border text-app-text-secondary hover:bg-app-hover hover:text-app-text-primary transition-all text-sm font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={modalType === "delete" ? confirmDeleteChat : confirmClearChat}
-                className={`px-4 py-2 rounded-xl text-white text-sm font-bold transition-all shadow-md active:scale-95 ${
-                  modalType === "delete"
-                    ? "bg-[#ea0038] hover:bg-[#ff1e56]"
-                    : "bg-[#e57c00] hover:bg-[#ff951e]"
-                }`}
-              >
-                {modalType === "delete" ? "Delete Chat" : "Clear Chat"}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

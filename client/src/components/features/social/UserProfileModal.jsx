@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { X, Mail, Users, Info, ArrowLeft, Shield, Copy, Ban } from "lucide-react";
 import { formatLastSeen } from "@utils/dateFormatter";
 import { useEscapeKey } from "@hooks/useEscapeKey";
+import { premiumConfirm } from "@utils/alert";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -49,7 +50,8 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
   };
 
   const handleBlock = async () => {
-    if (window.confirm(`Are you sure you want to block ${user.username}?`)) {
+    const confirmed = await premiumConfirm("Block User", `Are you sure you want to block ${user.username}?`, "warning");
+    if (confirmed) {
       try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
         const config = {
@@ -149,15 +151,12 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
         {/* AVATAR & BASIC DETAILS CARD */}
         <div className="relative flex flex-col items-center px-6 pt-8 pb-6 border-b border-app-border bg-transparent shrink-0">
           
-          {/* Avatar Container with Glowing Pulse Ring */}
+          {/* Avatar Container with Light Highlight Border */}
           <div className="relative group">
-            {isOnline && (
-              <span className="absolute -inset-1 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 blur-sm opacity-60 group-hover:opacity-90 transition duration-1000 group-hover:duration-200 animate-pulse" />
-            )}
             <div 
               onClick={() => setIsImageViewerOpen(true)}
-              className={`relative w-24 h-24 rounded-full overflow-hidden border-2 bg-app-card cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300 shadow-md ${
-                isOnline ? "border-emerald-400" : "border-app-border"
+              className={`relative w-24 h-24 rounded-full overflow-hidden border bg-app-card cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300 shadow-md ${
+                isOnline ? "border-emerald-500/40" : "border-app-border"
               }`}
               title="View Full Profile Photo"
             >
@@ -176,9 +175,6 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
                 Zoom
               </div>
             </div>
-            {isOnline && (
-              <span className="absolute bottom-0 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0e0e11]" />
-            )}
           </div>
 
           <div className="text-center mt-4">
@@ -188,9 +184,8 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
             
             <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-app-text-secondary">
               {isOnline ? (
-                <span className="inline-flex items-center gap-1.2 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                  Active Now
+                <span className="font-semibold opacity-80">
+                  Online
                 </span>
               ) : (
                 <span className="flex items-center gap-1 font-semibold opacity-80">
@@ -286,7 +281,7 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
             {/* ABOUT */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[10px] text-brand font-bold uppercase tracking-wider opacity-85">
-                <Info size={13} className="text-brand" /> About User
+                <Info size={13} className="text-brand" /> About
               </div>
               <p className="text-app-text-primary text-sm leading-relaxed break-words font-medium opacity-90">
                 {user.about || user.status || "Hey there! I am using Vertex Connect."}

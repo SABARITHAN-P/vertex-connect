@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import EmojiPicker from "emoji-picker-react";
 import api from "@services/api";
 import { useEscapeKey } from "@hooks/useEscapeKey";
+import { premiumAlert } from "@utils/alert";
 import CustomAudioPlayer from "@components/common/CustomAudioPlayer";
 import MessageInfoModal from "@components/features/chat/MessageInfoModal";
 
@@ -83,7 +84,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
           onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
         >
           {item.type === "image" ? (
-            <img src={item.url} alt="shared" className="w-full h-full object-cover rounded-lg hover:scale-102 transition duration-200" />
+            <img src={item.url} alt="shared" loading="lazy" className="w-full h-full object-cover rounded-lg hover:scale-102 transition duration-200" />
           ) : (
             <div className="relative w-full h-full flex items-center justify-center bg-black min-h-[160px]">
               <video src={item.url} className="w-full h-full object-cover" />
@@ -108,7 +109,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
               onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
             >
               {item.type === "image" ? (
-                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+                <img src={item.url} alt="media" loading="lazy" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center bg-black">
                   <video src={item.url} className="w-full h-full object-cover" />
@@ -133,7 +134,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
               onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
             >
               {item.type === "image" ? (
-                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+                <img src={item.url} alt="media" loading="lazy" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center bg-black">
                   <video src={item.url} className="w-full h-full object-cover" />
@@ -151,7 +152,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
               onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
             >
               {item.type === "image" ? (
-                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+                <img src={item.url} alt="media" loading="lazy" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center bg-black">
                   <video src={item.url} className="w-full h-full object-cover" />
@@ -178,7 +179,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
             onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
           >
             {item.type === "image" ? (
-              <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+              <img src={item.url} alt="media" loading="lazy" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
             ) : (
               <div className="relative w-full h-full flex items-center justify-center bg-black">
                 <video src={item.url} className="w-full h-full object-cover" />
@@ -198,7 +199,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
               onClick={() => onViewMedia?.({ ...item, senderName: sender?.username || "User", time })}
             >
               {item.type === "image" ? (
-                <img src={item.url} alt="media" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+                <img src={item.url} alt="media" loading="lazy" className="w-full h-full object-cover hover:scale-105 transition duration-200" />
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center bg-black">
                   <video src={item.url} className="w-full h-full object-cover" />
@@ -407,7 +408,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
     }
     try {
       if (!fileUrl) {
-        alert("This file is not available for download.");
+        premiumAlert("Unavailable", "This file is not available for download.", "warning");
         return;
       }
 
@@ -415,9 +416,9 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
       const response = await fetch(fileUrl);
       if (!response.ok) {
         if (response.status === 404) {
-          alert("File not found: This file does not exist on the server.");
+          premiumAlert("Not Found", "File not found: This file does not exist on the server.", "error");
         } else {
-          alert(`Unable to download: Server returned error status ${response.status}.`);
+          premiumAlert("Download Error", `Unable to download: Server returned error status ${response.status}.`, "error");
         }
         return;
       }
@@ -459,7 +460,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
       
       const downloadWindow = window.open(downloadUrl, "_blank");
       if (!downloadWindow) {
-        alert("Direct download blocked by popup blocker. Opening file in a new tab.");
+        premiumAlert("Download Blocked", "Direct download blocked by popup blocker. Opening file in a new tab.", "info");
         window.open(fileUrl, "_blank");
       }
 
@@ -802,7 +803,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
                   })}
                 </div>
                 <div className="flex justify-between items-center text-[9px] text-app-text-secondary font-semibold tracking-wider uppercase select-none border-b border-app-border pb-2">
-                  <span>{poll.showVoters === false ? "🔒 Secret Poll" : "👥 Public Poll"}</span>
+                  <span>{poll.showVoters === false ? "Secret Poll" : "Public Poll"}</span>
                   <span>{totalPollVotes} total votes</span>
                 </div>
 
@@ -823,7 +824,7 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
               <div className="space-y-2">
                 {media.length === 0 && mediaUrl ? (
                   <div className="relative cursor-pointer max-w-[280px] min-h-[160px] md:min-h-[200px] w-full bg-black/5 dark:bg-white/5 rounded-lg overflow-hidden" onClick={() => onViewMedia?.({ url: mediaUrl, type: "image", senderName: sender?.username || "User", time })}>
-                    <img src={mediaUrl} alt="shared" className="w-full h-full object-cover rounded-lg" />
+                    <img src={mediaUrl} alt="shared" loading="lazy" className="w-full h-full object-cover rounded-lg" />
                   </div>
                 ) : (
                   <>

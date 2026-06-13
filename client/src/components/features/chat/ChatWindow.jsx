@@ -15,6 +15,7 @@ import { formatLastSeen } from "@utils/dateFormatter";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { useCall } from "@context/CallContext";
 import toast from "react-hot-toast";
+import { premiumConfirm, premiumAlert } from "@utils/alert";
 
 function ChatWindow({
   selectedUser,
@@ -64,9 +65,6 @@ function ChatWindow({
   const [showMenu, setShowMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showMuteModal, setShowMuteModal] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [passcodePrompt, setPasscodePrompt] = useState(null); // null | { type: 'lock' | 'unlock' }
   const [passcodeValue, setPasscodeValue] = useState("");
 
@@ -85,18 +83,6 @@ function ChatWindow({
   useEscapeKey(() => {
     setShowMuteModal(false);
   }, showMuteModal, 12);
-
-  useEscapeKey(() => {
-    setShowClearConfirm(false);
-  }, showClearConfirm, 13);
-
-  useEscapeKey(() => {
-    setShowLeaveConfirm(false);
-  }, showLeaveConfirm, 14);
-
-  useEscapeKey(() => {
-    setShowBlockConfirm(false);
-  }, showBlockConfirm, 15);
 
   useEscapeKey(() => {
     setPasscodePrompt(null);
@@ -122,7 +108,8 @@ function ChatWindow({
     }
   }, [showSearch]);
 
-  const isOnline = onlineUsers?.some(id => id?.toString() === selectedUser?._id?.toString() || id?.toString() === selectedUser?.id?.toString());
+  const targetId = selectedUser?._id || selectedUser?.id;
+  const isOnline = onlineUsers?.some(id => id?.toString() === targetId?.toString());
 
   /* =========================
      SCROLL TO BOTTOM / TARGET
@@ -873,7 +860,6 @@ function ChatWindow({
     try {
       await api.post(`/chat/clear/${selectedUser.chatId}`);
       setMessages([]);
-      setShowClearConfirm(false);
       setShowMenu(false);
 
       // Clear the lastMessage preview locally
@@ -924,7 +910,7 @@ function ChatWindow({
           lockedBy: [{ user: currentUserIdStr, passcodeHash: "hidden" }]
         }));
 
-        toast.success("🔒 Chat locked successfully");
+        toast.success("Chat locked successfully");
       } else if (type === "unlock") {
         await api.post(`/chat/unlock/${selectedUser.chatId}`, { passcode: passcodeValue });
         sessionStorage.removeItem(`lock_passcode_${selectedUser.chatId}`);
@@ -942,13 +928,13 @@ function ChatWindow({
           lockedBy: []
         }));
 
-        toast.success("🔓 Chat unlocked successfully");
+        toast.success("Chat unlocked successfully");
       }
       setPasscodePrompt(null);
       setPasscodeValue("");
     } catch (err) {
       console.error("Failed to verify passcode:", err);
-      toast.error(err.response?.data?.message || "Failed to update lock state");
+      premiumAlert("Access Denied", err.response?.data?.message || "Incorrect passcode", "error");
     }
   };
 
@@ -967,7 +953,7 @@ function ChatWindow({
       );
 
       setSelectedUser(null);
-      toast.success(isArchived ? "📁 Chat archived successfully" : "📁 Chat unarchived successfully");
+      toast.success(isArchived ? "Chat archived successfully" : "Chat unarchived successfully");
     } catch (err) {
       console.error("Failed to archive chat:", err);
       toast.error("Failed to toggle archive state");
@@ -978,7 +964,6 @@ function ChatWindow({
     try {
       await api.post("/chat/group/leave", { chatId: selectedUser.chatId });
       handleLeaveGroupAction(selectedUser.chatId);
-      setShowLeaveConfirm(false);
       setShowMenu(false);
       toast.success("Left group successfully");
     } catch (err) {
@@ -993,7 +978,6 @@ function ChatWindow({
     try {
       await api.post(`/user/block/${targetId}`);
       toast.success("Contact blocked");
-      setShowBlockConfirm(false);
       fetchChatPermissions();
     } catch (err) {
       console.error(err);
@@ -1092,7 +1076,7 @@ function ChatWindow({
               <img src={selectedUser.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover shrink-0 border border-app-border/50" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-brand/10 dark:bg-brand/25 flex items-center justify-center text-brand dark:text-white font-semibold text-base shrink-0 border border-app-border/40">
-                {selectedUser.isGroupChat ? "👥" : selectedUser.username[0].toUpperCase()}
+                {selectedUser.isGroupChat ? <Users size={18} className="text-brand dark:text-white" /> : selectedUser.username[0].toUpperCase()}
               </div>
             )}
 
@@ -1107,7 +1091,7 @@ function ChatWindow({
                 </p>
               ) : (
                 <p className={`text-xs ${isOnline ? "text-brand font-medium animate-pulse" : "text-app-text-secondary"}`}>
-                  {isOnline ? "online" : formatLastSeen(lastSeenUsers[selectedUser._id] || selectedUser.lastSeen)}
+                  {isOnline ? "online" : formatLastSeen(lastSeenUsers[targetId] || selectedUser.lastSeen)}
                 </p>
               )}
             </div>
@@ -1233,12 +1217,19 @@ function ChatWindow({
 
                   {!selectedUser.isGroupChat && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setShowMenu(false);
                         if (chatPermission?.reason === "blocked" && chatPermission?.isBlockedByMe) {
                           handleUnblockContact();
                         } else {
-                          setShowBlockConfirm(true);
+                          const confirmed = await premiumConfirm(
+                            "Block Contact?",
+                            `Are you sure you want to block ${selectedUser.username}? You will not be able to send or receive messages from them.`,
+                            "warning"
+                          );
+                          if (confirmed) {
+                            handleBlockContactSubmit();
+                          }
                         }
                       }}
                       className="w-full text-left px-4 py-2.5 hover:bg-app-hover text-sm font-medium text-red-500 transition flex items-center gap-3 border-t border-app-border/40"
@@ -1272,22 +1263,36 @@ function ChatWindow({
 
                   {/* Clear Chat */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setShowMenu(false);
-                      setShowClearConfirm(true);
+                      const confirmed = await premiumConfirm(
+                        "Clear Chat?",
+                        "Are you sure you want to clear all messages in this chat? This action cannot be undone.",
+                        "warning"
+                      );
+                      if (confirmed) {
+                        handleClearChatSubmit();
+                      }
                     }}
                     className="w-full text-left px-4 py-2.5 hover:bg-app-hover text-sm font-medium text-red-500 transition flex items-center gap-3"
                   >
                     <Trash2 size={16} className="text-red-500/80" />
                     <span>Clear Chat</span>
                   </button>
-
+ 
                   {/* Group Specific Actions */}
                   {selectedUser.isGroupChat && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setShowMenu(false);
-                        setShowLeaveConfirm(true);
+                        const confirmed = await premiumConfirm(
+                          "Leave Group?",
+                          "Are you sure you want to leave this group chat? You will no longer be able to participate.",
+                          "warning"
+                        );
+                        if (confirmed) {
+                          handleLeaveGroupSubmit();
+                        }
                       }}
                       className="w-full text-left px-4 py-2.5 hover:bg-app-hover text-sm font-medium text-red-500 border-t border-app-border transition flex items-center gap-3"
                     >
@@ -1575,57 +1580,6 @@ function ChatWindow({
         initialMedia={selectedMedia}
         mediaList={allMediaItems}
       />
-      {/* CLEAR CHAT CONFIRMATION MODAL */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-50 animate-fade-in p-4">
-          <div className="bg-app-modal border border-app-border rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-scale-in">
-            <h3 className="text-lg font-bold text-app-text-primary mb-2">Clear Chat?</h3>
-            <p className="text-sm text-app-text-secondary mb-6 leading-relaxed">
-              Are you sure you want to clear all messages in this chat? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="px-4 py-2 text-xs font-semibold text-app-text-secondary hover:bg-app-hover rounded-xl transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClearChatSubmit}
-                className="px-4 py-2 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition shadow-md cursor-pointer"
-              >
-                Clear Messages
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* LEAVE GROUP CONFIRMATION MODAL */}
-      {showLeaveConfirm && (
-        <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-50 animate-fade-in p-4">
-          <div className="bg-app-modal border border-app-border rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-scale-in">
-            <h3 className="text-lg font-bold text-app-text-primary mb-2">Leave Group?</h3>
-            <p className="text-sm text-app-text-secondary mb-6 leading-relaxed">
-              Are you sure you want to leave this group chat? You will no longer be able to participate.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowLeaveConfirm(false)}
-                className="px-4 py-2 text-xs font-semibold text-app-text-secondary hover:bg-app-hover rounded-xl transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleLeaveGroupSubmit}
-                className="px-4 py-2 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition shadow-md cursor-pointer"
-              >
-                Leave Group
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MUTE NOTIFICATIONS DIALOG */}
       {showMuteModal && (
@@ -1653,31 +1607,6 @@ function ChatWindow({
                 className="px-4 py-2 text-xs font-semibold text-app-text-secondary hover:bg-app-hover rounded-xl transition cursor-pointer"
               >
                 Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* BLOCK CONTACT CONFIRMATION MODAL */}
-      {showBlockConfirm && (
-        <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-50 animate-fade-in p-4">
-          <div className="bg-app-modal border border-app-border rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-scale-in">
-            <h3 className="text-lg font-bold text-app-text-primary mb-2">Block Contact?</h3>
-            <p className="text-sm text-app-text-secondary mb-6 leading-relaxed">
-              Are you sure you want to block {selectedUser.username}? You will not be able to send or receive messages from them.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowBlockConfirm(false)}
-                className="px-4 py-2 text-xs font-semibold text-app-text-secondary hover:bg-app-hover rounded-xl transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBlockContactSubmit}
-                className="px-4 py-2 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition shadow-md cursor-pointer"
-              >
-                Block User
               </button>
             </div>
           </div>

@@ -68,7 +68,7 @@ function ThemeBackgroundDrawer({ onClose }) {
     setDraftType("default");
     setDraftValue("");
     setDraftOpacity(100);
-    toast.success("Preview reset to default! ✨");
+    toast.success("Preview reset to default!");
   };
 
   const handleFileUpload = async (e) => {
@@ -97,7 +97,7 @@ function ThemeBackgroundDrawer({ onClose }) {
       if (data && data.url) {
         setDraftType("custom");
         setDraftValue(data.url);
-        toast.success("Wallpaper uploaded to preview! Click Save to apply. 🌅");
+        toast.success("Wallpaper uploaded to preview! Click Save to apply.");
       }
     } catch (err) {
       console.error(err);
@@ -116,7 +116,7 @@ function ThemeBackgroundDrawer({ onClose }) {
         wallpaperValue: draftValue,
         wallpaperOpacity: draftOpacity,
       });
-      toast.success("Appearance settings saved! ✨");
+      toast.success("Appearance settings saved!");
       onClose();
     } catch (err) {
       console.error(err);
@@ -191,7 +191,7 @@ function ThemeBackgroundDrawer({ onClose }) {
                   }}
                   className="text-app-text-primary text-[10px] px-3 py-1.5 rounded-xl rounded-bl-none shadow border border-app-border/10 leading-relaxed font-medium"
                 >
-                  This live preview shows your new theme and wallpaper! ✨
+                  This live preview shows your new theme and wallpaper!
                 </div>
               </div>
 
@@ -201,7 +201,7 @@ function ThemeBackgroundDrawer({ onClose }) {
                 }}
                 className="text-app-text-inverse text-[10px] px-3 py-1.5 rounded-xl rounded-br-none shadow max-w-[80%] self-end border border-app-border/10 leading-relaxed font-medium"
               >
-                Wow, this looks absolutely stunning! 🚀
+                Wow, this looks absolutely stunning!
               </div>
             </div>
           </div>

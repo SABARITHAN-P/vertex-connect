@@ -20,6 +20,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
+import { premiumConfirm } from "@utils/alert";
 
 function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,8 +50,9 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
     fetchRequestCount();
   }, []);
 
-  const handleLogout = () => {
-    if (confirm("Are you sure you want to log out of Vertex Connect?")) {
+  const handleLogout = async () => {
+    const confirmed = await premiumConfirm("Log Out", "Are you sure you want to log out of Vertex Connect?", "warning");
+    if (confirmed) {
       localStorage.removeItem("userInfo");
       window.location.reload();
     }

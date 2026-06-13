@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import logo from "@assets/vite.svg";
 import toast from "react-hot-toast";
+import { premiumConfirm } from "@utils/alert";
 
 function TitleBar() {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -31,8 +32,9 @@ function TitleBar() {
     }
   };
 
-  const handleClose = () => {
-    if (confirm("Are you sure you want to close Vertex Connect?")) {
+  const handleClose = async () => {
+    const confirmed = await premiumConfirm("Close Application", "Are you sure you want to close Vertex Connect?", "warning");
+    if (confirmed) {
       // Browsers restrict close() to scripts that opened the window.
       // We log simulated message.
       toast.error("Simulated closing window. Browser restrictions prevent programmatic closing.");

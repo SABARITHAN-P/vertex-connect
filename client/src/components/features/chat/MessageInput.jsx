@@ -11,6 +11,15 @@ import MediaPanel from "@components/features/media/MediaPanel";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { useTheme } from "@context/ThemeContext";
 import { playSentSound } from "@utils/soundHelper";
+import { premiumAlert } from "@utils/alert";
+
+const calculateFileHash = async (file) => {
+  const arrayBuffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hashHex;
+};
 
 function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyToMsg, setReplyToMsg, setUploadQueue }) {
   const { enterToSend, soundsEnabled } = useTheme();
@@ -248,7 +257,7 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
     const MAX_SIZE = 100 * 1024 * 1024;
     const oversizedFile = files.find((file) => file.size > MAX_SIZE);
     if (oversizedFile) {
-      alert(`${oversizedFile.name} exceeds 100MB limit`);
+      premiumAlert("File Too Large", `${oversizedFile.name} exceeds the 100MB size limit.`, "error");
       return;
     }
 
@@ -256,7 +265,6 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
     setSelectedFiles(files);
     e.target.value = "";
   };
-
   const startUploadFlow = async (tempId, files, caption, peaks = []) => {
     // 1. Mark upload queue as starting
     setUploadQueue((prev) => ({
@@ -275,53 +283,77 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
     });
 
     try {
-      // 2. Perform image compression in background thread (inside the promise)
-      const processedFiles = await Promise.all(
+      // 2. Perform client-side hash checks to find cached media on backend
+      const hashChecks = await Promise.all(
         files.map(async (file) => {
-          let finalFile = file;
-          if (file.type.startsWith("image/")) {
-            try {
-              finalFile = await imageCompression(file, {
-                maxSizeMB: 1.5,
-                maxWidthOrHeight: 1920,
-                useWebWorker: true,
-              });
-            } catch (err) {
-              console.error("Compression failed, using original file", err);
+          try {
+            const hash = await calculateFileHash(file);
+            const checkRes = await api.get(`/upload/check/${hash}`);
+            if (checkRes.data && checkRes.data.exists) {
+              return { exists: true, media: checkRes.data.media };
             }
+          } catch (hashErr) {
+            console.error("Hash check failed for file:", file.name, hashErr);
           }
-          return finalFile;
+          return { exists: false, file };
         })
       );
 
-      // 3. Perform file upload
-      const formData = new FormData();
-      processedFiles.forEach((file) => {
-        formData.append("files", file);
-      });
+      const cachedMedia = hashChecks.filter((res) => res.exists).map((res) => res.media);
+      const uncachedFiles = hashChecks.filter((res) => !res.exists).map((res) => res.file);
 
-      const uploadRes = await api.post("/upload", formData, {
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+      let uploadedMedia = [];
 
-          setUploadQueue((prev) => ({
-            ...prev,
-            [tempId]: {
-              ...prev[tempId],
+      if (uncachedFiles.length > 0) {
+        // 3. Compress and upload uncached files
+        const processedFiles = await Promise.all(
+          uncachedFiles.map(async (file) => {
+            let finalFile = file;
+            if (file.type.startsWith("image/")) {
+              try {
+                finalFile = await imageCompression(file, {
+                  maxSizeMB: 1.5,
+                  maxWidthOrHeight: 1920,
+                  useWebWorker: true,
+                });
+              } catch (err) {
+                console.error("Compression failed, using original file", err);
+              }
+            }
+            return finalFile;
+          })
+        );
+
+        const formData = new FormData();
+        processedFiles.forEach((file) => {
+          formData.append("files", file);
+        });
+
+        const uploadRes = await api.post("/upload", formData, {
+          onUploadProgress: (progressEvent) => {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+
+            setUploadQueue((prev) => ({
+              ...prev,
+              [tempId]: {
+                ...prev[tempId],
+                progress: percent,
+              },
+            }));
+
+            socket.emit("message:upload-progress", {
+              chatId: selectedUser.chatId,
+              tempId,
               progress: percent,
-            },
-          }));
+            });
+          },
+        });
 
-          socket.emit("message:upload-progress", {
-            chatId: selectedUser.chatId,
-            tempId,
-            progress: percent,
-          });
-        },
-      });
+        uploadedMedia = uploadRes.data.media;
+      }
 
-      // Attach visual peaks metadata back to audio/voice media properties
-      const uploadedMedia = uploadRes.data.media.map((m) => {
+      // Combine cached media and freshly uploaded media
+      const finalMediaList = [...cachedMedia, ...uploadedMedia].map((m) => {
         if (m.type === "audio" && peaks && peaks.length > 0) {
           return { ...m, peaks };
         }
@@ -333,8 +365,8 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
         chatId: selectedUser.chatId,
         content: caption,
         caption: caption,
-        media: uploadedMedia,
-        messageType: processedFiles.length === 1 ? detectMessageType(processedFiles[0].type) : "media",
+        media: finalMediaList,
+        messageType: files.length === 1 ? detectMessageType(files[0].type) : "media",
         replyTo: buildReplyToObj(),
       });
 

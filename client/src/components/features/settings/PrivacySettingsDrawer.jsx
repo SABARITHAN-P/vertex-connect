@@ -140,8 +140,8 @@ function PrivacySettingsDrawer({ onClose }) {
             <AlertCircle size={14} className="text-brand shrink-0 mt-0.5" />
             <p className="text-[10px] text-app-text-secondary leading-normal">
               {settings.accountType === "private"
-                ? "🔒 Private Account: Only users who mutually follow you can start new chat sessions or send messages."
-                : "🌐 Public Account: Anyone can send you initial messages, but you can only reply if you follow them back."}
+                ? "Private Account: Only users who mutually follow you can start new chat sessions or send messages."
+                : "Public Account: Anyone can send you initial messages, but you can only reply if you follow them back."}
             </p>
           </div>
         </div>

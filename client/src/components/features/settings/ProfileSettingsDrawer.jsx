@@ -3,6 +3,7 @@ import api from "@services/api";
 import { ArrowLeft, Camera, Edit2, Check, X, User, Info } from "lucide-react";
 import ImageEditorModal from "@components/features/media/ImageEditorModal";
 import { useEscapeKey } from "@hooks/useEscapeKey";
+import { premiumAlert, premiumConfirm } from "@utils/alert";
 
 function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
   const [username, setUsername] = useState(currentUser.username || "");
@@ -30,7 +31,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload a valid image file.");
+      premiumAlert("Invalid File", "Please upload a valid image file.", "error");
       return;
     }
 
@@ -67,7 +68,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
       setUploadProgress(100);
     } catch (error) {
       console.error(error);
-      alert("Failed to upload profile picture.");
+      premiumAlert("Upload Failed", "Failed to upload profile picture.", "error");
     } finally {
       setTimeout(() => {
         setLoading(false);
@@ -78,7 +79,12 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
 
   // Remove Profile Picture
   const handleRemoveAvatar = async () => {
-    if (!confirm("Are you sure you want to remove your profile picture?")) return;
+    const confirmed = await premiumConfirm(
+      "Remove Profile Picture",
+      "Are you sure you want to remove your profile picture?",
+      "question"
+    );
+    if (!confirmed) return;
     setLoading(true);
     try {
       await api.delete("/user/avatar");
@@ -88,7 +94,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
       setCurrentUser?.(updatedUser);
     } catch (error) {
       console.error(error);
-      alert("Failed to remove profile picture.");
+      premiumAlert("Error", "Failed to remove profile picture.", "error");
     } finally {
       setLoading(false);
     }
@@ -117,7 +123,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
     } catch (error) {
       console.error(error);
       const errMsg = error.response?.data?.message || "Failed to update username.";
-      alert(errMsg);
+      premiumAlert("Error", errMsg, "error");
     } finally {
       setLoading(false);
     }
@@ -143,7 +149,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
       setIsEditingStatus(false);
     } catch (error) {
       console.error(error);
-      alert("Failed to update status.");
+      premiumAlert("Error", "Failed to update status.", "error");
     } finally {
       setLoading(false);
     }

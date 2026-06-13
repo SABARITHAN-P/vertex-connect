@@ -4,6 +4,7 @@ import { X, Users, Image as ImageIcon, Calendar, Shield, Trash, LogOut, Check, S
 import api from "@services/api";
 import ImageEditorModal from "@components/features/media/ImageEditorModal";
 import { useEscapeKey } from "@hooks/useEscapeKey";
+import { premiumAlert, premiumConfirm } from "@utils/alert";
 
 function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, onLeaveGroup }) {
   const [activeTab, setActiveTab] = useState("members");
@@ -60,16 +61,16 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
     }
     try {
       if (!fileUrl) {
-        alert("This file is not available for download.");
+        premiumAlert("Unavailable", "This file is not available for download.", "warning");
         return;
       }
 
       const response = await fetch(fileUrl);
       if (!response.ok) {
         if (response.status === 404) {
-          alert("File not found: This file does not exist on the server.");
+          premiumAlert("Not Found", "File not found: This file does not exist on the server.", "error");
         } else {
-          alert(`Unable to download: Server returned error status ${response.status}.`);
+          premiumAlert("Download Error", `Unable to download: Server returned error status ${response.status}.`, "error");
         }
         return;
       }
@@ -310,7 +311,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   };
 
   const handleRemoveGroupAvatar = async () => {
-    if (!confirm("Are you sure you want to remove the group avatar?")) return;
+    const confirmed = await premiumConfirm("Remove Avatar", "Are you sure you want to remove the group avatar?", "question");
+    if (!confirmed) return;
     setAvatarLoading(true);
     try {
       const { data } = await api.delete("/chat/group/avatar", {
@@ -338,7 +340,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   const handleAddSelectedMembers = async () => {
     if (selectedUsersToAdd.length === 0) return;
     const usernames = selectedUsersToAdd.map((u) => u.username).join(", ");
-    if (!confirm(`Are you sure you want to add these users to the group?\n\n${usernames}`)) {
+    const confirmed = await premiumConfirm("Add Members", `Are you sure you want to add these users to the group?\n\n${usernames}`, "question");
+    if (!confirmed) {
       return;
     }
 
@@ -386,9 +389,11 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   const handleLeaveGroup = async () => {
     const hasLeftGroup = userRole === "left";
     if (hasLeftGroup) {
-      if (!confirm("Are you sure you want to delete this group chat? This will remove the chat history and the group from your sidebar permanently.")) return;
+      const confirmed = await premiumConfirm("Delete Group Chat", "Are you sure you want to delete this group chat? This will remove the chat history and the group from your sidebar permanently.", "warning");
+      if (!confirmed) return;
     } else {
-      if (!confirm("Are you sure you want to exit this group? You will no longer be able to send or receive messages in this chat.")) return;
+      const confirmed = await premiumConfirm("Exit Group", "Are you sure you want to exit this group? You will no longer be able to send or receive messages in this chat.", "warning");
+      if (!confirmed) return;
     }
 
     try {
@@ -400,7 +405,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   };
 
   const handleLeaveAndDeleteGroup = async () => {
-    if (!confirm("Are you sure you want to exit and completely delete this group chat from your sidebar? The group will continue to run for other members, but it will be permanently removed for you.")) return;
+    const confirmed = await premiumConfirm("Exit & Delete Group", "Are you sure you want to exit and completely delete this group chat from your sidebar? The group will continue to run for other members, but it will be permanently removed for you.", "warning");
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -1253,7 +1259,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
               {userRole === "owner" && selectedMemberAction.memberObj.role !== "owner" && (
                 <button
                   onClick={async () => {
-                    if (confirm(`Are you sure you want to transfer group leadership to @${selectedMemberAction.memberUser.username}?`)) {
+                    const confirmed = await premiumConfirm("Transfer Leadership", `Are you sure you want to transfer group leadership to @${selectedMemberAction.memberUser.username}?`, "question");
+                    if (confirmed) {
                       await handleTransferOwnership(selectedMemberAction.memberUser._id);
                       setSelectedMemberAction(null);
                     }
@@ -1268,7 +1275,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
               {((userRole === "owner") || (userRole === "admin" && selectedMemberAction.memberObj.role === "member")) && (
                 <button
                   onClick={async () => {
-                    if (confirm(`Are you sure you want to remove @${selectedMemberAction.memberUser.username} from this group?`)) {
+                    const confirmed = await premiumConfirm("Remove Member", `Are you sure you want to remove @${selectedMemberAction.memberUser.username} from this group?`, "warning");
+                    if (confirmed) {
                       await handleRemoveMember(selectedMemberAction.memberUser._id);
                       setSelectedMemberAction(null);
                     }
@@ -1307,7 +1315,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                 onClick={async () => {
                   const msgId = mediaContextMenu.msgId;
                   setMediaContextMenu(null);
-                  if (confirm("Are you sure you want to delete this message and its attachment for everyone?")) {
+                  const confirmed = await premiumConfirm("Delete for Everyone", "Are you sure you want to delete this message and its attachment for everyone?", "warning");
+                  if (confirmed) {
                     try {
                       await api.delete(`/message/${msgId}`, { data: { deleteType: "forEveryone" } });
                       setMediaFiles(prev => prev.filter(m => m._id !== msgId));
@@ -1327,7 +1336,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                 onClick={async () => {
                   const msgId = mediaContextMenu.msgId;
                   setMediaContextMenu(null);
-                  if (confirm("Are you sure you want to delete this attachment for you?")) {
+                  const confirmed = await premiumConfirm("Delete for Me", "Are you sure you want to delete this attachment for you?", "question");
+                  if (confirmed) {
                     try {
                       await api.delete(`/message/${msgId}`, { data: { deleteType: "forMe" } });
                       setMediaFiles(prev => prev.filter(m => m._id !== msgId));
@@ -1349,7 +1359,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
               onClick={async () => {
                 const msgId = mediaContextMenu.msgId;
                 setMediaContextMenu(null);
-                if (confirm("Are you sure you want to delete this attachment for you?")) {
+                const confirmed = await premiumConfirm("Delete for Me", "Are you sure you want to delete this attachment for you?", "question");
+                if (confirmed) {
                   try {
                     await api.delete(`/message/${msgId}`, { data: { deleteType: "forMe" } });
                     setMediaFiles(prev => prev.filter(m => m._id !== msgId));

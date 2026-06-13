@@ -2,11 +2,16 @@ const express = require("express");
 
 const router = express.Router();
 
-const { uploadMedia } = require("./upload.controller");
+const { uploadMedia, checkFileHash } = require("./upload.controller");
 
 const upload = require("../../middleware/uploadMiddleware");
 
 const protect = require("../../middleware/authMiddleware");
+
+/* =========================================================
+   CHECK FILE HASH FOR INSTANT UPLOAD
+========================================================= */
+router.get("/check/:hash", protect, checkFileHash);
 
 /* =========================================================
    MULTIPLE MEDIA UPLOAD
