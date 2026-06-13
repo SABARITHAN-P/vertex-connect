@@ -1,7 +1,30 @@
 const User = require("../models/User");
 const redisClient = require("../config/redis");
 const PrivacySettings = require("../models/PrivacySettings");
-const { getCachedPrivacySettings } = require("../utils/cacheHelper");
+const { getCachedPrivacySettings, invalidateChatsCache } = require("../utils/cacheHelper");
+
+const invalidateChatsForUserContacts = async (userId) => {
+  if (!userId) return;
+  try {
+    const Chat = require("../models/Chat");
+    const userChats = await Chat.find({ participants: userId }).select("participants");
+    const uniqueUserIds = new Set();
+    for (const chat of userChats) {
+      if (chat.participants) {
+        for (const pId of chat.participants) {
+          if (pId.toString() !== userId.toString()) {
+            uniqueUserIds.add(pId.toString());
+          }
+        }
+      }
+    }
+    for (const contactId of uniqueUserIds) {
+      await invalidateChatsCache(contactId);
+    }
+  } catch (err) {
+    console.error("Failed to invalidate contacts' chats cache:", err);
+  }
+};
 
 const emitOnlineUsers = async (io) => {
   try {
@@ -16,6 +39,41 @@ const emitOnlineUsers = async (io) => {
 };
 
 const socketHandler = (io) => {
+  // Clear all stale sockets and online users from Redis on server startup/initialization!
+  (async () => {
+    try {
+      if (!redisClient.isOpen) {
+        await new Promise((resolve) => {
+          redisClient.once("ready", resolve);
+          // Safety timeout in case Redis is not running or down
+          setTimeout(resolve, 3000);
+        });
+      }
+
+      if (redisClient.isOpen) {
+        console.log("Initializing socket handler, cleaning stale presence cache...");
+        
+        // 1. Delete all user_sockets:* keys
+        const keys = await redisClient.keys("user_sockets:*");
+        if (keys && keys.length > 0) {
+          await redisClient.del(keys);
+        }
+        
+        // 2. Delete the online_users set
+        await redisClient.del("online_users");
+        
+        // 3. Set all users to offline in the database on server startup
+        await User.updateMany({ status: "online" }, { status: "offline", lastSeen: new Date() });
+        
+        console.log("Presence cache cleared successfully on startup.");
+      } else {
+        console.warn("Skipping Redis presence cache cleanup: Redis client is not open.");
+      }
+    } catch (err) {
+      console.error("Failed to clean presence cache on startup:", err);
+    }
+  })();
+
   io.on("connection", (socket) => {
     console.log("New Socket Connected:", socket.id);
 
@@ -40,6 +98,7 @@ const socketHandler = (io) => {
         await User.findByIdAndUpdate(userId, {
           status: "online",
         });
+        await invalidateChatsForUserContacts(userId);
 
         console.log("User Joined Personal Room:", userId);
 
@@ -278,10 +337,13 @@ const socketHandler = (io) => {
         // Remove socket globally from Redis
         await redisClient.sRem(`user_sockets:${userId}`, socket.id);
 
-        // Check if the user has any active sockets globally
-        const remainingCount = await redisClient.sCard(`user_sockets:${userId}`);
+        // Check if the user has any active sockets on this server
+        const activeRoomSockets = io.sockets.adapter.rooms.get(userId.toString());
+        const hasActiveSockets = activeRoomSockets && activeRoomSockets.size > 0;
 
-        if (remainingCount === 0) {
+        if (!hasActiveSockets) {
+          // No active sockets left! Clean up Redis and set offline
+          await redisClient.del(`user_sockets:${userId}`);
           await redisClient.sRem("online_users", userId);
 
           /* UPDATE USER OFFLINE */
@@ -291,6 +353,8 @@ const socketHandler = (io) => {
             status: "offline",
             lastSeen,
           });
+
+          await invalidateChatsForUserContacts(userId);
 
           /* EMIT OFFLINE EVENT */
           io.emit("userOffline", {
@@ -303,12 +367,19 @@ const socketHandler = (io) => {
             lastSeen,
           });
 
-          console.log("User Removed Globally:", userId);
+          console.log("User Removed Globally (No active sockets):", userId);
+        } else {
+          // Prune any stale socket IDs from Redis that are not actually connected
+          const cachedSockets = await redisClient.sMembers(`user_sockets:${userId}`);
+          for (const sId of cachedSockets) {
+            if (!activeRoomSockets.has(sId)) {
+              await redisClient.sRem(`user_sockets:${userId}`, sId);
+            }
+          }
         }
 
         /* UPDATE ONLINE USERS */
-        const globalOnlineUsers = await redisClient.sMembers("online_users");
-        io.emit("onlineUsers", globalOnlineUsers);
+        await emitOnlineUsers(io);
 
         console.log("Socket Disconnected:", socket.id);
       } catch (error) {
