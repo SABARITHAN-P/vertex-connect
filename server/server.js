@@ -20,7 +20,19 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      const allowedOrigins = [
+        /^http:\/\/localhost(:\d+)?$/,
+        process.env.CLIENT_URL
+      ].filter(Boolean);
+      
+      const isAllowed = !origin || allowedOrigins.some(pattern => {
+        if (pattern instanceof RegExp) {
+          return pattern.test(origin);
+        }
+        return pattern === origin;
+      });
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
