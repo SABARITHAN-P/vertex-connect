@@ -7,6 +7,8 @@ import ForgotPassword from "@pages/ForgotPassword";
 import ResetPassword from "@pages/ResetPassword";
 import ChatPage from "@pages/ChatPage";
 import ProtectedRoute from "@components/common/ProtectedRoute";
+import { Toaster } from "react-hot-toast";
+import { useTheme } from "@context/ThemeContext";
 
 /* SOCKET */
 import { socket } from "@socket/socket";
@@ -30,6 +32,8 @@ function RootRedirect() {
 }
 
 function App() {
+  const { theme } = useTheme();
+
   useEffect(() => {
     socket.on("connect", () => {
       console.log("Connected to Socket Server:", socket.id);
@@ -41,9 +45,39 @@ function App() {
   }, []);
 
   return (
-    <Routes>
-      {/* ROOT */}
-      <Route path="/" element={<RootRedirect />} />
+    <>
+      <Toaster
+        position="bottom-left"
+        toastOptions={{
+          style: {
+            background: theme === "dark" ? "#f8fafc" : "#182229",
+            color: theme === "dark" ? "#0f172a" : "#f1f5f9",
+            fontSize: "13px",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            boxShadow: theme === "dark" 
+              ? "0 4px 12px rgba(0, 0, 0, 0.25)" 
+              : "0 4px 12px rgba(0, 0, 0, 0.35)",
+            border: theme === "dark" 
+              ? "1px solid rgba(0, 0, 0, 0.06)" 
+              : "1px solid rgba(255, 255, 255, 0.08)",
+            maxWidth: "350px",
+          },
+          success: {
+            icon: null,
+          },
+          error: {
+            icon: null,
+          },
+          loading: {
+            icon: null,
+          },
+        }}
+      />
+      <Routes>
+        {/* ROOT */}
+        <Route path="/" element={<RootRedirect />} />
 
       {/* LOGIN */}
       <Route
@@ -115,6 +149,7 @@ function App() {
         }
       />
     </Routes>
+    </>
   );
 }
 

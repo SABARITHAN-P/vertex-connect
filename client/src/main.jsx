@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "./App";
@@ -25,30 +24,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <CallProvider>
           <BrowserRouter>
-            <Toaster
-              position="bottom-left"
-              toastOptions={{
-                style: {
-                  background: "#182229",
-                  color: "#f1f5f9",
-                  fontSize: "13px",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.35)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  maxWidth: "350px",
-                },
-                success: {
-                  icon: null,
-                },
-                error: {
-                  icon: null,
-                },
-                loading: {
-                  icon: null,
-                },
-              }}
-            />
             <App />
           </BrowserRouter>
         </CallProvider>
