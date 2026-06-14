@@ -172,7 +172,7 @@ function ProfileSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
       <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center gap-6 pb-12">
         
         {/* AVATAR SYSTEM */}
-        <div className="relative group w-32 h-32 rounded-full overflow-hidden flex items-center justify-center cursor-pointer bg-brand border-2 border-dashed border-app-border/80 hover:border-brand transition-all shadow-md shrink-0">
+        <div className="relative group w-32 h-32 rounded-full overflow-hidden flex items-center justify-center cursor-pointer bg-brand border-2 border-app-border/80 hover:border-brand transition-all shadow-md shrink-0">
           {avatar ? (
             <img
               src={avatar}
