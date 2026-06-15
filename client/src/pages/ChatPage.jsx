@@ -608,7 +608,7 @@ function ChatPage() {
   };
 
   return (
-    <div className="h-screen bg-app-chat flex overflow-hidden">
+    <div className="h-full w-full bg-app-chat flex overflow-hidden">
       {/* SIDEBAR */}
       <div
         className={`
@@ -617,6 +617,7 @@ function ChatPage() {
           md:w-[380px]
           border-r
           border-app-border
+          h-full
         `}
       >
         <Sidebar
@@ -641,6 +642,7 @@ function ChatPage() {
         className={`
           ${selectedUser ? "flex" : "hidden md:flex"}
           flex-1
+          h-full
         `}
       >
         {selectedUser?.isAiChat ? (

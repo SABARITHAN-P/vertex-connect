@@ -1103,7 +1103,7 @@ function ChatWindow({
           </div>
 
           <div className="flex items-center gap-5 text-app-text-secondary shrink-0">
-            <button onClick={() => setShowSearch(!showSearch)} className="hover:text-app-text-primary transition font-semibold" title="Search Messages">
+            <button onClick={() => setShowSearch(!showSearch)} className="hidden md:block hover:text-app-text-primary transition font-semibold" title="Search Messages">
               <Search size={20} />
             </button>
             {!selectedUser.isGroupChat && (
