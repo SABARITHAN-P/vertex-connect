@@ -139,6 +139,13 @@ const createCallHistory = async (req, res) => {
       return res.status(400).json({ message: "Required parameters missing" });
     }
 
+    // Check call privacy permissions (matches message privacy settings)
+    const { checkCallPermission } = require("../../utils/privacyHelper");
+    const permission = await checkCallPermission(callerId, receiverId);
+    if (!permission.allowed) {
+      return res.status(403).json({ message: permission.message });
+    }
+
     const log = new CallHistory({
       caller: callerId,
       receiver: receiverId,

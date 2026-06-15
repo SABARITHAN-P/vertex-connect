@@ -1563,8 +1563,8 @@ const getChatPermissions = async (req, res) => {
         reason: "blocked",
         isBlockedByMe,
         message: isBlockedByMe 
-          ? "You have blocked this user. Unblock to send messages."
-          : "You cannot send messages to this user because you have been blocked.",
+          ? "You have blocked this user. Unblock to message or call."
+          : "You cannot message or call this user because you have been blocked.",
       });
     }
 
@@ -1583,7 +1583,7 @@ const getChatPermissions = async (req, res) => {
         return res.status(200).json({
           allowed: false,
           reason: "private_mutual_required",
-          message: "You must follow each other mutually to send messages. 🔒",
+          message: "You must follow each other mutually to message or call.",
         });
       }
     } else {
@@ -1591,21 +1591,21 @@ const getChatPermissions = async (req, res) => {
         return res.status(200).json({
           allowed: false,
           reason: "nobody",
-          message: "This user has disabled direct messaging. 🔒",
+          message: "This user has disabled messages and calls.",
         });
       }
       if (receiverSettings.messagesPermission === "followers" && !receiverFollowsSender) {
         return res.status(200).json({
           allowed: false,
           reason: "followers_only",
-          message: "You must follow this user to send them messages. 🔒",
+          message: "You must follow this user to message or call them.",
         });
       }
       if (receiverSettings.messagesPermission === "mutual" && !isMutual) {
         return res.status(200).json({
           allowed: false,
           reason: "mutual_only",
-          message: "You must follow each other mutually to send messages. 🔒",
+          message: "You must follow each other mutually to message or call.",
         });
       }
 

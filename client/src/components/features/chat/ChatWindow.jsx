@@ -1116,15 +1116,35 @@ function ChatWindow({
             {!selectedUser.isGroupChat && (
               <>
                 <button
-                  onClick={() => initiateCall(selectedUser, "video")}
-                  className="hover:text-app-text-primary transition cursor-pointer"
+                  onClick={() => {
+                    if (chatPermission && !chatPermission.allowed) {
+                      toast.error(chatPermission.message || "You do not have permission to call this user.");
+                    } else {
+                      initiateCall(selectedUser, "video");
+                    }
+                  }}
+                  className={`transition cursor-pointer ${
+                    chatPermission && !chatPermission.allowed
+                      ? "opacity-40 cursor-not-allowed text-app-text-secondary"
+                      : "hover:text-app-text-primary text-app-text-secondary"
+                  }`}
                   title="Video Call"
                 >
                   <Video size={22} />
                 </button>
                 <button
-                  onClick={() => initiateCall(selectedUser, "voice")}
-                  className="hover:text-app-text-primary transition cursor-pointer"
+                  onClick={() => {
+                    if (chatPermission && !chatPermission.allowed) {
+                      toast.error(chatPermission.message || "You do not have permission to call this user.");
+                    } else {
+                      initiateCall(selectedUser, "voice");
+                    }
+                  }}
+                  className={`transition cursor-pointer ${
+                    chatPermission && !chatPermission.allowed
+                      ? "opacity-40 cursor-not-allowed text-app-text-secondary"
+                      : "hover:text-app-text-primary text-app-text-secondary"
+                  }`}
                   title="Voice Call"
                 >
                   <Phone size={20} />
@@ -1550,7 +1570,7 @@ function ChatWindow({
             return (
               <div className="bg-app-input border-t border-app-border py-4 px-6 text-center select-none animate-fade-in flex items-center justify-center gap-2">
                 <span className="text-app-text-secondary text-xs font-semibold tracking-wide flex items-center gap-2 px-4 py-2.5 bg-app-input/40 border border-app-border rounded-xl shadow-inner">
-                  <Lock size={14} className="text-red-500 shrink-0 animate-pulse" /> {chatPermission.message}
+                  <Info size={14} className="text-brand shrink-0" /> {chatPermission.message}
                 </span>
               </div>
             );

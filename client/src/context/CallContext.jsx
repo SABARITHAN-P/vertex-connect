@@ -177,6 +177,11 @@ export const CallProvider = ({ children }) => {
         callDbIdRef.current = data._id;
       } catch (err) {
         console.error("Failed to log initial call:", err);
+        if (err.response?.status === 403) {
+          toast.error(err.response?.data?.message || "You do not have permission to call this user.");
+          cleanupCall();
+          return;
+        }
       }
 
       socket.emit("call:initiate", {
@@ -481,7 +486,7 @@ export const CallProvider = ({ children }) => {
     });
 
     // 9. Call failed
-    socket.on("call:failed", ({ reason }) => {
+    socket.on("call:failed", ({ reason, message }) => {
       console.warn(`Socket Received: Call failed. Reason: ${reason}`);
       toneSynthesizer.stopAll();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -495,6 +500,9 @@ export const CallProvider = ({ children }) => {
       } else if (reason === "offline") {
         toast.error("User is currently offline.");
         setCallState("failed");
+      } else if (reason === "permission_denied") {
+        toast.error(message || "You do not have permission to call this user.");
+        setCallState("rejected");
       } else {
         toast.error("Call failed to connect.");
         setCallState("failed");

@@ -258,15 +258,15 @@ function PrivacySettingsDrawer({ onClose }) {
           </div>
         </div>
 
-        {/* MESSAGES PERMISSION */}
+        {/* MESSAGES & CALLS PERMISSION */}
         <div className="bg-app-header/40 border border-app-border/80 rounded-2xl p-5 space-y-4">
           <div className="flex items-center gap-3">
             <div className="p-2 text-brand bg-brand/10 rounded-xl">
               <MessageCircle size={18} />
             </div>
             <div>
-              <h3 className="text-app-text-primary font-bold text-xs uppercase tracking-wider">Direct Messages</h3>
-              <p className="text-app-text-secondary text-[10px] mt-0.5">Who can start a conversation with you.</p>
+              <h3 className="text-app-text-primary font-bold text-xs uppercase tracking-wider">Messages & Calls</h3>
+              <p className="text-app-text-secondary text-[10px] mt-0.5">Who can message or call you.</p>
             </div>
           </div>
 

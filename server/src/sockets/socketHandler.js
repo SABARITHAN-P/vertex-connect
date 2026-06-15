@@ -209,6 +209,13 @@ const socketHandler = (io) => {
       if (!callerId) return;
 
       try {
+        const { checkCallPermission } = require("../utils/privacyHelper");
+        const permission = await checkCallPermission(callerId, receiverId);
+        if (!permission.allowed) {
+          socket.emit("call:failed", { reason: "permission_denied", message: permission.message, callId });
+          return;
+        }
+
         const callerBusy = await redisClient.get(`active_call:${callerId}`);
         if (callerBusy) {
           socket.emit("call:failed", { reason: "you_busy", callId });

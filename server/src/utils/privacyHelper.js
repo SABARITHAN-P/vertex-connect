@@ -1,4 +1,6 @@
 const { getCachedPrivacySettings, checkFollowStatusCached } = require("./cacheHelper");
+const Block = require("../models/Block");
+const PrivacySettings = require("../models/PrivacySettings");
 
 /**
  * Redacts lastSeen and avatar properties of a user based on their privacy settings.
@@ -68,4 +70,84 @@ const redactUserPrivacy = async (requestingUserId, user) => {
   return user;
 };
 
-module.exports = { redactUserPrivacy };
+/**
+ * Checks call permissions between a caller and a receiver.
+ * @param {string|ObjectId} callerId - ID of the caller.
+ * @param {string|ObjectId} receiverId - ID of the receiver.
+ * @returns {object} { allowed: boolean, reason?: string, message?: string }
+ */
+const checkCallPermission = async (callerId, receiverId) => {
+  if (callerId.toString() === receiverId.toString()) {
+    return { allowed: true };
+  }
+
+  // 1. Check Block relationship
+  const blockExists = await Block.findOne({
+    $or: [
+      { blocker: callerId, blocked: receiverId },
+      { blocker: receiverId, blocked: callerId },
+    ],
+  });
+  if (blockExists) {
+    const isBlockedByMe = blockExists.blocker.toString() === callerId.toString();
+    return {
+      allowed: false,
+      reason: "blocked",
+      isBlockedByMe,
+      message: isBlockedByMe 
+        ? "You have blocked this user. Unblock to call."
+        : "You cannot call this user because you have been blocked.",
+    };
+  }
+
+  // 2. Fetch Follow status and settings
+  const senderFollowsReceiver = await checkFollowStatusCached(callerId, receiverId);
+  const receiverFollowsSender = await checkFollowStatusCached(receiverId, callerId);
+  const isMutual = !!(senderFollowsReceiver && receiverFollowsSender);
+
+  let receiverSettings = await getCachedPrivacySettings(receiverId);
+  if (!receiverSettings) {
+    receiverSettings = await PrivacySettings.findOne({ user: receiverId });
+    if (!receiverSettings) {
+      receiverSettings = { accountType: "public", messagesPermission: "everyone" };
+    }
+  }
+
+  // 3. Evaluate Privacy Permissions (Call matches Messages settings)
+  if (receiverSettings.accountType === "private") {
+    if (!isMutual) {
+      return {
+        allowed: false,
+        reason: "private_mutual_required",
+        message: "You must follow each other mutually to message or call.",
+      };
+    }
+  } else {
+    const permission = receiverSettings.messagesPermission || "everyone";
+    if (permission === "nobody") {
+      return {
+        allowed: false,
+        reason: "nobody",
+        message: "This user has disabled messages and calls.",
+      };
+    }
+    if (permission === "followers" && !receiverFollowsSender) {
+      return {
+        allowed: false,
+        reason: "followers_only",
+        message: "You must follow this user to message or call them.",
+      };
+    }
+    if (permission === "mutual" && !isMutual) {
+      return {
+        allowed: false,
+        reason: "mutual_only",
+        message: "You must follow each other mutually to message or call.",
+      };
+    }
+  }
+
+  return { allowed: true };
+};
+
+module.exports = { redactUserPrivacy, checkCallPermission };
