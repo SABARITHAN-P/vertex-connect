@@ -57,6 +57,4 @@ const userAppearanceSchema = new mongoose.Schema(
   }
 );
 
-userAppearanceSchema.index({ user: 1 });
-
 module.exports = mongoose.model("UserAppearance", userAppearanceSchema);
