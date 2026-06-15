@@ -284,6 +284,7 @@ exports.sendMessage = async (req, res) => {
 
     // Construct full system prompt or guidelines
     const systemPrompt = `You are a professional, helpful developer-focused AI Assistant inside "Vertex Connect", a premium chatting and collaborations application.
+Current Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 Format responses in clean GitHub Flavored Markdown (GFM). Use headers, bold text, lists, and tables where helpful.
 For code snippets, ALWAYS specify the language (e.g. \`\`\`javascript) and provide complete, clean, optimized code. Include comments where necessary.
 Keep explanations clear and structured.
@@ -362,6 +363,7 @@ CRITICAL SAFETY RULE: You must absolutely refuse to respond to any sensitive, un
       }
       const model = genAI.getGenerativeModel({ 
         model: modelName,
+        tools: [{ googleSearch: {} }],
         safetySettings: [
           {
             category: HarmCategory.HARM_CATEGORY_HARASSMENT,
