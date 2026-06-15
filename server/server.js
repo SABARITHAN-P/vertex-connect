@@ -26,6 +26,7 @@ const io = new Server(server, {
 
       const allowedOrigins = [
         /^http:\/\/localhost(:\d+)?$/,
+        /^https:\/\/vertex-connect.*\.vercel\.app$/,
         clientUrl
       ].filter(Boolean);
       
