@@ -19,6 +19,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [selectedMemberAction, setSelectedMemberAction] = useState(null);
   const [downloadedUrls, setDownloadedUrls] = useState(() => {
     try {
@@ -52,7 +53,8 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
   }, []);
 
   // Centralized ESC key support: close sidebar on Escape. Priority: 5 (lower than modals)
-  useEscapeKey(onClose, !isEditorOpen, 5);
+  useEscapeKey(() => setIsImageViewerOpen(false), isImageViewerOpen, 20);
+  useEscapeKey(onClose, !isEditorOpen && !isImageViewerOpen, 5);
 
   const handleFileDownload = async (e, fileUrl, fileName) => {
     if (e) {
@@ -587,49 +589,52 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
       <div className="flex-1 overflow-y-auto">
         {/* GROUP HEADER METADATA */}
         <div className="flex flex-col items-center py-6 px-4 bg-app-header/20 border-b border-app-border">
-          <div
-            onClick={() => {
-              if (canEditProfilePhoto()) {
-                groupFileRef.current?.click();
-              }
-            }}
-            className={`relative group w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-black/5 dark:bg-white/5 border-2 border-gray-200/50 transition-all ${
-              canEditProfilePhoto() ? "cursor-pointer" : ""
-            }`}
-          >
-            {chat.groupAvatar ? (
-              <img
-                src={chat.groupAvatar}
-                alt="Group Avatar"
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            ) : (
-              <span className="text-app-text-primary text-3xl font-bold transition-transform duration-300 group-hover:scale-105">
-                {chat.chatName ? chat.chatName.charAt(0).toUpperCase() : "G"}
-              </span>
-            )}
+          <div className="relative group">
+            {/* The main avatar container */}
+            <div
+              onClick={() => setIsImageViewerOpen(true)}
+              className="relative w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-black/5 dark:bg-white/5 border-2 border-gray-200/50 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-md"
+              title="View Group Photo"
+            >
+              {chat.groupAvatar ? (
+                <img
+                  src={chat.groupAvatar}
+                  alt="Group Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-app-text-primary text-3xl font-bold">
+                  {chat.chatName ? chat.chatName.charAt(0).toUpperCase() : "G"}
+                </span>
+              )}
+              {/* Zoom overlay on hover */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[9px] text-white font-bold uppercase tracking-wider">
+                Zoom
+              </div>
 
-            {/* ADMIN HOVER CAMERA OVERLAY */}
-            {canEditProfilePhoto() && (
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center px-1"
+              {/* LOADING STATE */}
+              {avatarLoading && (
+                <div className="absolute inset-0 bg-[#111b21]/80 flex flex-col items-center justify-center gap-1 z-20">
+                  <div className="w-6 h-6 border-3 border-brand border-t-transparent rounded-full animate-spin"></div>
+                  {uploadProgress > 0 && (
+                    <span className="text-[9px] text-white font-semibold">{uploadProgress}%</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* EDIT PHOTO BUTTON - placed as a floating badge at bottom right of the avatar */}
+            {canEditProfilePhoto() && !avatarLoading && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  groupFileRef.current?.click();
+                }}
+                className="absolute bottom-0 right-0 p-2 bg-brand text-white rounded-full hover:bg-brand/90 transition shadow-md border border-app-border cursor-pointer flex items-center justify-center z-10"
                 title="Change Group Photo"
               >
-                <Camera size={20} className="text-white animate-pulse" />
-                <span className="text-[8px] text-white uppercase font-bold tracking-wider mt-0.5">
-                  Change Photo
-                </span>
-              </div>
-            )}
-
-            {/* LOADING STATE */}
-            {avatarLoading && (
-              <div className="absolute inset-0 bg-[#111b21]/80 flex flex-col items-center justify-center gap-1">
-                <div className="w-6 h-6 border-3 border-brand border-t-transparent rounded-full animate-spin"></div>
-                {uploadProgress > 0 && (
-                  <span className="text-[9px] text-white font-semibold">{uploadProgress}%</span>
-                )}
-              </div>
+                <Camera size={14} />
+              </button>
             )}
           </div>
 
@@ -962,7 +967,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                       inputEl.focus();
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand hover:bg-brand/90 text-white text-xs font-bold tracking-wider uppercase transition mt-4 shadow-sm hover:scale-[1.01] duration-200"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand/10 hover:bg-brand/20 border border-brand/30 text-brand text-xs font-bold tracking-wider uppercase transition mt-4 shadow-sm hover:scale-[1.01] duration-200 cursor-pointer"
                 >
                   <Plus size={15} />
                   <span>Add participant +</span>
@@ -974,7 +979,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                 {userRole === "left" ? (
                   <button
                     onClick={handleLeaveGroup}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold tracking-wider uppercase transition shadow-sm hover:scale-[1.01] duration-200"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 dark:text-red-400 text-xs font-bold tracking-wider uppercase transition shadow-sm hover:scale-[1.01] duration-200 cursor-pointer"
                   >
                     <Trash size={14} />
                     <span>Delete Group Chat</span>
@@ -983,7 +988,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
                   <>
                     <button
                       onClick={handleLeaveGroup}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 text-xs font-semibold tracking-wider uppercase transition"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/15 dark:border-red-500/20 text-red-500 dark:text-red-400/80 hover:text-red-400 hover:bg-red-500/10 text-xs font-semibold tracking-wider uppercase transition cursor-pointer"
                     >
                       <LogOut size={14} />
                       <span>Exit Group</span>
@@ -991,7 +996,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
 
                     <button
                       onClick={handleLeaveAndDeleteGroup}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold tracking-wider uppercase transition shadow-sm hover:scale-[1.01] duration-200"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 dark:text-red-400 text-xs font-bold tracking-wider uppercase transition shadow-sm hover:scale-[1.01] duration-200 cursor-pointer"
                     >
                       <Trash size={14} />
                       <span>Exit & Delete Group</span>
@@ -1190,6 +1195,39 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
         imageSrc={selectedImageSrc}
         onSave={handleSaveGroupCrop}
       />
+
+      {/* ENLARGED GROUP PROFILE IMAGE INLINE OVERLAY */}
+      {isImageViewerOpen && (
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-md z-[70] flex flex-col items-center justify-center p-6 animate-fade-in text-app-text-primary">
+          <div className="relative w-full max-w-[280px] sm:max-w-[300px] flex flex-col items-center gap-4">
+            <button
+              onClick={() => setIsImageViewerOpen(false)}
+              className="absolute -top-12 right-0 p-2 text-app-text-secondary hover:text-white bg-app-header hover:bg-app-hover border border-app-border rounded-full transition shadow-lg cursor-pointer"
+              title="Close Preview"
+            >
+              <X size={18} />
+            </button>
+            
+            <div className="w-full aspect-square rounded-2xl overflow-hidden border border-app-border bg-app-drawer shadow-2xl animate-scale-in">
+              {chat.groupAvatar ? (
+                <img 
+                  src={chat.groupAvatar} 
+                  alt={chat.chatName} 
+                  className="w-full h-full object-cover animate-scale-in" 
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-bold text-5xl bg-brand/10 dark:bg-brand/25 text-brand dark:text-white">
+                  {chat.chatName ? chat.chatName.charAt(0).toUpperCase() : "G"}
+                </div>
+              )}
+            </div>
+
+            <span className="text-white text-sm font-semibold tracking-wide truncate max-w-full">
+              {chat.chatName}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* WHATSAPP STYLE PREMIUM MEMBER ACTIONS MODAL */}
       {selectedMemberAction && (
