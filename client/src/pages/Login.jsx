@@ -99,7 +99,7 @@ function Login() {
               placeholder="name@example.com or username"
               value={formData.identifier}
               onChange={handleChange}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
           </div>
           {errors.identifier && (
@@ -135,7 +135,7 @@ function Login() {
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
             <button
               type="button"

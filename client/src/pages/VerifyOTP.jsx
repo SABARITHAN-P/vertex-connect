@@ -107,7 +107,7 @@ function VerifyOTP() {
                 setOtp(e.target.value);
               }}
               maxLength={6}
-              className="w-full text-center tracking-[8px] text-2xl bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-4 py-3.5 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 font-bold"
+              className="w-full text-center tracking-[8px] text-2xl bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-4 py-3.5 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 font-bold"
             />
           </div>
           {errors.otp && (

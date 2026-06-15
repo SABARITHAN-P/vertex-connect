@@ -94,9 +94,9 @@ function Register() {
       subtitle="Register to continue to Vertex Connect"
       mode="register"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
         {/* USERNAME FIELD */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 lg:space-y-1.5">
           <label className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 select-none">
             Username
           </label>
@@ -110,7 +110,7 @@ function Register() {
               placeholder="johndoe"
               value={formData.username}
               onChange={handleChange}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 lg:py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
           </div>
           {errors.username && (
@@ -121,7 +121,7 @@ function Register() {
         </div>
 
         {/* EMAIL FIELD */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 lg:space-y-1.5">
           <label className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 select-none">
             Email Address
           </label>
@@ -135,7 +135,7 @@ function Register() {
               placeholder="name@example.com"
               value={formData.email}
               onChange={handleChange}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 lg:py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
           </div>
           {errors.email && (
@@ -146,7 +146,7 @@ function Register() {
         </div>
 
         {/* PASSWORD FIELD */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 lg:space-y-1.5">
           <label className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 select-none">
             Password
           </label>
@@ -160,7 +160,7 @@ function Register() {
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-10 py-2.5 lg:py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
             <button
               type="button"
@@ -178,7 +178,7 @@ function Register() {
         </div>
 
         {/* CONFIRM PASSWORD FIELD */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 lg:space-y-1.5">
           <label className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 select-none">
             Confirm Password
           </label>
@@ -192,7 +192,7 @@ function Register() {
               placeholder="••••••••"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-10 py-2.5 lg:py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
             <button
               type="button"
@@ -218,7 +218,7 @@ function Register() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white transition rounded-xl py-3 text-sm font-semibold disabled:opacity-50 cursor-pointer shadow-sm shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] duration-200"
+          className="w-full mt-1 lg:mt-2 bg-indigo-600 hover:bg-indigo-700 text-white transition rounded-xl py-2.5 lg:py-3 text-sm font-semibold disabled:opacity-50 cursor-pointer shadow-sm shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] duration-200"
         >
           {loading ? "Sending OTP..." : "Send OTP"}
         </button>

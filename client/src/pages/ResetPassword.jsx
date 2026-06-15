@@ -119,7 +119,7 @@ function ResetPassword() {
                 setOtp(e.target.value);
               }}
               maxLength={6}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm font-semibold tracking-wider"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-4 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm font-semibold tracking-wider"
             />
           </div>
           {errors.otp && (
@@ -146,7 +146,7 @@ function ResetPassword() {
                 setErrors({ ...errors, newPassword: "", global: "" });
                 setNewPassword(e.target.value);
               }}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
             <button
               type="button"
@@ -180,7 +180,7 @@ function ResetPassword() {
                 setErrors({ ...errors, confirmPassword: "", global: "" });
                 setConfirmPassword(e.target.value);
               }}
-              className="w-full bg-[#f9fafb] border border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
+              className="w-full bg-white/60 lg:bg-[#f9fafb] border border-indigo-100/80 lg:border-zinc-200 rounded-xl pl-10 pr-10 py-3 outline-none focus:border-brand focus:bg-white focus:ring-4 focus:ring-brand/5 text-zinc-800 placeholder-zinc-400 transition-all duration-200 text-sm"
             />
             <button
               type="button"

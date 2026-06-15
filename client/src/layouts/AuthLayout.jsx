@@ -1,4 +1,5 @@
 import logo from "@assets/vite.svg";
+import bgImage from "@assets/login_bg.png";
 import { 
   Phone,
   PhoneCall, 
@@ -239,28 +240,40 @@ function AuthLayout({ children, title, subtitle, mode = "login" }) {
       </div>
 
       {/* RIGHT PANEL: AUTHENTICATION FORM CARD - HIGHEST CONTRAST CRISP WHITE BACKGROUND */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-10 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-10 bg-transparent lg:bg-white">
         
-        {/* Soft Background shapes for Mobile/Tablet layout */}
-        <div className="absolute inset-0 lg:hidden pointer-events-none bg-gradient-to-tr from-[#f3f4fc] to-[#ffffff]">
+        {/* Soft Background shapes & Premium User Illustration for Mobile/Tablet layout */}
+        <div className="absolute inset-0 lg:hidden pointer-events-none bg-slate-50">
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.85]"
+            style={{ backgroundImage: `url(${bgImage})` }}
+          />
           <div className="absolute top-10 left-10 w-48 h-48 rounded-full bg-brand/5 blur-3xl" />
           <div className="absolute bottom-10 right-10 w-48 h-48 rounded-full bg-indigo-500/5 blur-3xl" />
         </div>
 
-        {/* Clean, Frameless Container directly on white background */}
-        <div className="w-full max-w-md relative z-20 transition-all duration-300">
-          <div className="mb-8 text-center">
+        {/* Clean, Frameless Container on desktop, premium glassmorphic card on mobile */}
+        <div className={`w-full max-w-md relative z-20 transition-all duration-300 premium-glass-card rounded-3xl lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:p-0 lg:shadow-none ${
+          mode === "register" ? "p-5 sm:p-6" : "p-6 sm:p-8"
+        }`}>
+          <div className={`${mode === "register" ? "mb-4 lg:mb-8" : "mb-8"} text-center`}>
             {/* Header logo for mobile layout (hidden on lg) */}
-            <div className="lg:hidden inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white border border-indigo-100 shadow-sm text-brand mb-4 select-none">
-              <img src={logo} alt="Vertex Connect Logo" className="w-7 h-7" />
+            <div className={`lg:hidden inline-flex items-center justify-center rounded-xl bg-white/60 border border-white/40 shadow-sm text-brand select-none ${
+              mode === "register" ? "w-10 h-10 mb-2 lg:mb-4" : "w-12 h-12 mb-4"
+            }`}>
+              <img src={logo} alt="Vertex Connect Logo" className={mode === "register" ? "w-6 h-6" : "w-7 h-7"} />
             </div>
-            <h1 className="lg:hidden text-2xl font-bold tracking-tight text-zinc-800 font-st-sans mb-5">
+            <h1 className={`lg:hidden font-bold tracking-tight text-zinc-800 font-st-sans ${
+              mode === "register" ? "text-xl mb-3 lg:text-2xl lg:mb-5" : "text-2xl mb-5"
+            }`}>
               Vertex Connect
             </h1>
-            <h2 className="text-2xl font-extrabold text-zinc-800 font-st-sans tracking-tight">
+            <h2 className={`font-extrabold text-zinc-800 font-st-sans tracking-tight ${
+              mode === "register" ? "text-xl lg:text-2xl" : "text-2xl"
+            }`}>
               {title}
             </h2>
-            <p className="text-zinc-400 mt-2 text-sm">
+            <p className={`text-zinc-400 mt-1.5 text-xs lg:text-sm`}>
               {subtitle}
             </p>
           </div>
