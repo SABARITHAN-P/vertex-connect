@@ -11,7 +11,7 @@ const aiConversationSchema = new mongoose.Schema(
     title: {
       type: String,
       trim: true,
-      default: "New AI Chat",
+      default: "New Chat",
     },
     model: {
       type: String,

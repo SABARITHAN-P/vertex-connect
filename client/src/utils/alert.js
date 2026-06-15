@@ -23,6 +23,7 @@ export const premiumAlert = (title, text = "") => {
     color: "var(--text-primary)",
     buttonsStyling: false,
     customClass: swalCustomClass,
+    heightAuto: false,
   });
 };
 
@@ -43,5 +44,6 @@ export const premiumConfirm = (title, text = "") => {
     color: "var(--text-primary)",
     buttonsStyling: false,
     customClass: swalCustomClass,
+    heightAuto: false,
   }).then((result) => !!result.isConfirmed);
 };

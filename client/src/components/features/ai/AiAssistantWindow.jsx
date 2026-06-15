@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "@services/api";
 import MarkdownRenderer from "@components/common/MarkdownRenderer";
-import AiSettingsDrawer from "@components/features/ai/AiSettingsDrawer";
+
 import { 
   Send, 
   Bot, 
@@ -14,7 +14,8 @@ import {
   FileText, 
   ArrowDown,
   Info,
-  ArrowLeft
+  ArrowLeft,
+  Key
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -29,12 +30,11 @@ const QUICK_PROMPTS = [
   { title: "Summarize Text", desc: "Extract key takeaways", prompt: "Summarize the key points of the following text:\n\n" },
 ];
 
-export default function AiAssistantWindow({ conversation, onUpdateConversation, onClearHistory, onClose }) {
+export default function AiAssistantWindow({ conversation, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [attachedFile, setAttachedFile] = useState(null);
 
   const [prevConversationId, setPrevConversationId] = useState(conversation?._id);
@@ -46,7 +46,6 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
   
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
-  const [isCloud, setIsCloud] = useState(false);
 
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -56,19 +55,6 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
   useEffect(() => {
     generatingRef.current = generating;
   }, [generating]);
-
-  // Fetch Cloud vs Local mode info
-  useEffect(() => {
-    const fetchMode = async () => {
-      try {
-        const { data } = await api.get("/ai/models");
-        setIsCloud(!!data.isCloud);
-      } catch {
-        setIsCloud(false);
-      }
-    };
-    fetchMode();
-  }, [conversation?._id]);
 
   // Load message history on conversation mount
   useEffect(() => {
@@ -134,6 +120,14 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
 
     if (generating) return;
 
+    // Check if custom key is set before sending message
+    if (!localStorage.getItem("vertex_custom_gemini_key")) {
+      toast.error("Please add your Gemini API Key in Settings to start chatting.");
+      sessionStorage.setItem("open_settings_ai", "true");
+      window.dispatchEvent(new CustomEvent("open-settings-ai"));
+      return;
+    }
+
     // Build payload details
     const attachments = attachedFile ? [attachedFile] : [];
     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
@@ -171,12 +165,18 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
     abortControllerRef.current = new AbortController();
 
     try {
+      const customGeminiKey = localStorage.getItem("vertex_custom_gemini_key");
+      const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      };
+      if (customGeminiKey) {
+        headers["x-gemini-key"] = customGeminiKey;
+      }
+
       const response = await fetch(`${API_BASE_URL}/ai/conversations/${conversation._id}/messages`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify({
           content: isRegenerate ? "" : messageContent,
           attachments,
@@ -207,12 +207,15 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
               const payload = JSON.parse(line.replace("data: ", ""));
               
               if (payload.token) {
-                // Update final character streaming
+                // Update final character streaming (non-mutating for React Strict Mode safety)
                 setMessages(prev => {
                   const copy = [...prev];
                   const idx = copy.findIndex(m => m._id === tempAssistantId);
                   if (idx !== -1) {
-                    copy[idx].content += payload.token;
+                    copy[idx] = {
+                      ...copy[idx],
+                      content: copy[idx].content + payload.token
+                    };
                   }
                   return copy;
                 });
@@ -256,6 +259,7 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
     } finally {
       setGenerating(false);
       abortControllerRef.current = null;
+      window.dispatchEvent(new CustomEvent("ai-conversations-updated"));
     }
   };
 
@@ -318,18 +322,9 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
           <div>
             <h1 className="text-sm font-semibold text-app-text-primary flex items-center gap-1.5">
               <span>Vertex AI Assistant</span>
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                isCloud ? "bg-brand/20 text-brand" : "bg-amber-500/20 text-amber-500"
-              }`}>
-                {isCloud ? "CLOUD" : "LOCAL"}
-              </span>
             </h1>
-            <p className="text-[11px] text-app-text-secondary truncate max-w-[200px] sm:max-w-xs">
-              Model: <span className="font-mono">{conversation?.model || "Gemma"}</span>
-            </p>
           </div>
         </div>
-
 
       </div>
 
@@ -378,12 +373,37 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
               ))}
             </div>
             
-            <div className="mt-8 bg-app-input border border-app-border rounded-xl p-3.5 flex items-start gap-3">
-              <Info size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-app-text-secondary leading-normal">
-                To start a completely new session, close this chat and click <strong>New AI Chat</strong> in the sidebar. You can configure creative sliders and select models in <strong>Settings</strong> at the top right.
-              </p>
-            </div>
+            {!localStorage.getItem("vertex_custom_gemini_key") ? (
+              <div className="mt-8 bg-brand/5 border border-brand/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+                <div className="flex items-start gap-3 text-left">
+                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0 mt-0.5">
+                    <Key size={16} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-app-text-primary">Gemini API Key Required</h4>
+                    <p className="text-[11px] text-app-text-secondary mt-1 leading-normal">
+                      To start chatting with the Vertex AI Assistant, please add your custom Gemini API key in settings.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem("open_settings_ai", "true");
+                    window.dispatchEvent(new CustomEvent("open-settings-ai"));
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-brand text-white font-semibold rounded-xl text-xs hover:opacity-90 transition cursor-pointer text-center shrink-0 shadow-sm"
+                >
+                  Configure Key
+                </button>
+              </div>
+            ) : (
+              <div className="mt-8 bg-app-input border border-app-border rounded-xl p-3.5 flex items-start gap-3">
+                <Info size={16} className="text-brand shrink-0 mt-0.5" />
+                <p className="text-xs text-app-text-secondary leading-normal text-left">
+                  To start a new session, close this chat and click <strong>New Chat</strong>. You are currently using your own private Gemini API Key.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           /* MESSAGE STREAM */
@@ -575,15 +595,7 @@ export default function AiAssistantWindow({ conversation, onUpdateConversation, 
         </form>
       </div>
 
-      {/* SETTINGS DRAWER OVERLAY */}
-      {showSettings && (
-        <AiSettingsDrawer
-          onClose={() => setShowSettings(false)}
-          conversation={conversation}
-          onUpdateConversation={onUpdateConversation}
-          onClearHistory={onClearHistory}
-        />
-      )}
+
 
     </div>
   );

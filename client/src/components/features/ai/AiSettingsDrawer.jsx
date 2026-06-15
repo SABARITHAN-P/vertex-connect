@@ -1,79 +1,37 @@
-import { useState, useEffect } from "react";
-import api from "@services/api";
-import { ArrowLeft, Sliders, Activity, Trash2, Cpu } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Key, ExternalLink, HelpCircle } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import toast from "react-hot-toast";
-import { premiumConfirm } from "@utils/alert";
 
-export default function AiSettingsDrawer({ onClose, conversation, onUpdateConversation, onClearHistory }) {
-  const [models, setModels] = useState([]);
-  const [ollamaConnected, setOllamaConnected] = useState(true);
-  const [selectedModel, setSelectedModel] = useState(conversation?.model || "gemma:latest");
-  const [temperature, setTemperature] = useState(conversation?.temperature || 0.7);
-  const [maxTokens, setMaxTokens] = useState(conversation?.maxTokens || 2048);
+export default function AiSettingsDrawer({ onClose }) {
+  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem("vertex_custom_gemini_key") || "");
   const [loading, setLoading] = useState(false);
-  const [loadingModels, setLoadingModels] = useState(false);
-
-  const [isCloud, setIsCloud] = useState(false);
 
   // Close on Escape key
   useEscapeKey(onClose, true, 5);
 
-  // Fetch installed models
-  useEffect(() => {
-    const fetchModels = async () => {
-      setLoadingModels(true);
-      try {
-        const { data } = await api.get("/ai/models");
-        setModels(data.models || []);
-        setOllamaConnected(data.ollamaConnected);
-        setIsCloud(!!data.isCloud);
-        
-        // If current model is not in fetched models and we are connected, append it
-        if (conversation && data.models && !data.models.includes(conversation.model)) {
-          setModels(prev => [...prev, conversation.model]);
-        }
-      } catch (err) {
-        console.error("Failed to load models:", err);
-        setOllamaConnected(false);
-        setIsCloud(false);
-        setModels(["gemma:latest", "llama3:latest", "mistral:latest", "phi3:latest"]);
-      } finally {
-        setLoadingModels(false);
-      }
-    };
-    fetchModels();
-  }, [conversation]);
-
-  const handleSaveSettings = async () => {
-    if (!conversation) return;
+  const handleSaveSettings = () => {
     setLoading(true);
     try {
-      const { data } = await api.put(`/ai/conversations/${conversation._id}`, {
-        model: selectedModel,
-        temperature: Number(temperature),
-        maxTokens: Number(maxTokens),
-      });
-      onUpdateConversation(data);
-      toast.success("AI Settings updated successfully!");
+      const trimmedKey = customApiKey.trim();
+      if (trimmedKey) {
+        localStorage.setItem("vertex_custom_gemini_key", trimmedKey);
+        toast.success("Custom Gemini API Key saved!");
+      } else {
+        localStorage.removeItem("vertex_custom_gemini_key");
+        toast.success("Custom key removed. Using default server key.");
+      }
       onClose();
     } catch (err) {
-      console.error("Failed to update AI settings:", err);
-      toast.error("Failed to update settings");
+      console.error("Failed to save AI key:", err);
+      toast.error("Failed to save settings");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClearHistoryClick = async () => {
-    const confirmed = await premiumConfirm("Clear AI Chats", "Are you sure you want to clear all your AI conversations? This cannot be undone.", "warning");
-    if (confirmed) {
-      onClearHistory();
-    }
-  };
-
   return (
-    <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none">
+    <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none animate-slide-in">
       
       {/* HEADER */}
       <div className="h-[60px] bg-app-header flex items-center p-4 gap-4 border-b border-app-border shrink-0">
@@ -89,111 +47,69 @@ export default function AiSettingsDrawer({ onClose, conversation, onUpdateConver
       {/* BODY */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         
-        {/* MODEL SECTION */}
-        <div className="space-y-2">
+        {/* INSTRUCTIONS GUIDE */}
+        <div className="bg-app-header/40 border border-app-border/60 rounded-xl p-4 space-y-3.5">
           <div className="flex items-center gap-2 text-sm font-semibold text-brand">
-            <Cpu size={16} />
-            <span>{isCloud ? "Select Cloud AI Model" : "Select Local AI Model"}</span>
+            <HelpCircle size={16} />
+            <span>How to get your free API Key</span>
           </div>
           
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={loadingModels}
-            className="w-full bg-app-input text-app-text-primary text-sm rounded-xl p-3 border border-app-border outline-none focus:border-brand transition"
-          >
-            {loadingModels ? (
-              <option>Loading models...</option>
-            ) : (
-              models.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))
-            )}
-          </select>
-
-          {isCloud ? (
-            <p className="text-xs text-emerald-500 leading-normal mt-1 font-medium">
-              Connected to Gemini Cloud API. Zero setup or local resources required.
-            </p>
-          ) : !ollamaConnected ? (
-            <p className="text-xs text-amber-500 leading-normal mt-1">
-              ⚠️ Ollama local server is offline. Run `ollama serve` and download models to enable local execution. Showing default configurations.
-            </p>
-          ) : (
-            <p className="text-xs text-app-text-secondary leading-normal mt-1">
-              Currently connected to local Ollama server. Detected {models.length} models installed.
-            </p>
-          )}
+          <ol className="text-xs text-app-text-secondary space-y-2.5 list-decimal pl-4 leading-relaxed text-left">
+            <li>
+              Go to the{" "}
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand hover:underline inline-flex items-center gap-0.5 font-medium"
+              >
+                Google AI Studio Key Manager
+                <ExternalLink size={10} className="inline" />
+              </a>.
+            </li>
+            <li>
+              Sign in with your standard Google Account.
+            </li>
+            <li>
+              Click the blue <strong>Create API Key</strong> button at the top left.
+            </li>
+            <li>
+              Choose <strong>Create API key in new project</strong> (or select an existing Google Cloud project).
+            </li>
+            <li>
+              Copy the generated key (starts with <code>AIzaSy...</code>) and paste it in the field below.
+            </li>
+          </ol>
         </div>
 
-        {/* TEMPERATURE SECTION */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm font-semibold text-brand">
-            <div className="flex items-center gap-2">
-              <Sliders size={16} />
-              <span>Creativity (Temperature)</span>
-            </div>
-            <span className="text-xs font-mono bg-app-input px-2 py-0.5 rounded text-app-text-primary">
-              {temperature}
-            </span>
+        {/* CUSTOM API KEY INPUT */}
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-brand">
+            <Key size={16} />
+            <span>Custom Gemini API Key</span>
           </div>
           
           <input
-            type="range"
-            min="0.0"
-            max="1.0"
-            step="0.1"
-            value={temperature}
-            onChange={(e) => setTemperature(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-app-input rounded-lg appearance-none cursor-pointer accent-brand"
+            type="password"
+            placeholder="Paste your Gemini API Key here..."
+            value={customApiKey}
+            onChange={(e) => setCustomApiKey(e.target.value)}
+            className="w-full bg-app-input text-app-text-primary text-sm rounded-xl p-3.5 border border-app-border outline-none focus:border-brand transition font-mono"
           />
-
-          <div className="flex justify-between text-[10px] text-app-text-secondary">
-            <span>Precise / Codegen (0.0)</span>
-            <span>Creative / Writing (1.0)</span>
-          </div>
-        </div>
-
-        {/* MAX TOKENS SECTION */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-brand">
-            <Activity size={16} />
-            <span>Response Length (Max Tokens)</span>
-          </div>
           
-          <select
-            value={maxTokens}
-            onChange={(e) => setMaxTokens(parseInt(e.target.value))}
-            className="w-full bg-app-input text-app-text-primary text-sm rounded-xl p-3 border border-app-border outline-none focus:border-brand transition"
-          >
-            <option value={512}>512 Tokens (Short Replies)</option>
-            <option value={1024}>1024 Tokens (Medium Replies)</option>
-            <option value={2048}>2048 Tokens (Standard Length)</option>
-            <option value={4096}>4096 Tokens (Long Explanations)</option>
-          </select>
-          <p className="text-xs text-app-text-secondary leading-normal">
-            {isCloud ? "Limits the maximum size of the response generated by the cloud model." : "Limits the maximum size of the response generated by the local LLM to prevent long generation delays."}
+          <p className="text-[11px] text-app-text-secondary leading-normal text-left">
+            Your custom key is saved directly in your browser's local storage for privacy. It is sent to Google's API to handle requests and is never stored on our servers. Leaving this field blank will fallback to the server's default shared API key.
           </p>
         </div>
 
         {/* ACTIONS */}
-        <div className="pt-6 border-t border-app-border space-y-4">
+        <div className="pt-4 border-t border-app-border/40 space-y-4">
           <button
             onClick={handleSaveSettings}
             disabled={loading}
             className="w-full bg-brand hover:opacity-90 text-white font-semibold py-3 rounded-xl transition cursor-pointer text-sm shadow-md"
           >
             {loading ? "Saving Settings..." : "Save Configuration"}
-          </button>
-
-          <button
-            onClick={handleClearHistoryClick}
-            className="w-full bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/20 hover:border-red-600/30 font-semibold py-3 rounded-xl transition cursor-pointer text-sm flex items-center justify-center gap-2"
-          >
-            <Trash2 size={16} />
-            <span>Clear AI Conversations History</span>
           </button>
         </div>
 

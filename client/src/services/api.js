@@ -21,6 +21,12 @@ api.interceptors.request.use((config) => {
     }
   }
 
+  // Inject custom Gemini API key if present
+  const customGeminiKey = localStorage.getItem("vertex_custom_gemini_key");
+  if (customGeminiKey) {
+    config.headers["x-gemini-key"] = customGeminiKey;
+  }
+
   return config;
 });
 

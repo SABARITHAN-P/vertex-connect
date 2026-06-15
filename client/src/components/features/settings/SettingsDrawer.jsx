@@ -6,6 +6,7 @@ import ThemeBackgroundDrawer from "@components/features/settings/ThemeBackground
 import GeneralSettingsDrawer from "@components/features/settings/GeneralSettingsDrawer";
 import HelpFeedbackDrawer from "@components/features/settings/HelpFeedbackDrawer";
 import FollowersFollowingDrawer from "@components/features/social/FollowersFollowingDrawer";
+import AiSettingsDrawer from "@components/features/ai/AiSettingsDrawer";
 import api from "@services/api";
 import { 
   ArrowLeft, 
@@ -17,10 +18,12 @@ import {
   HelpCircle, 
   LogOut,
   Users,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { premiumConfirm } from "@utils/alert";
+import toast from "react-hot-toast";
 
 function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,10 +33,33 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
   const [showHelpFeedback, setShowHelpFeedback] = useState(false);
   const [showFollowersFollowing, setShowFollowersFollowing] = useState(false);
+  const [showAiSettings, setShowAiSettings] = useState(false);
+  const [showPasswordVerification, setShowPasswordVerification] = useState(false);
+  const [verifyPasswordText, setVerifyPasswordText] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
 
   // Centralized ESC key support: close settings drawer on Escape. Priority: 5
   useEscapeKey(onClose, true, 5);
+
+  const handleVerifyPasswordSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!verifyPasswordText) return;
+    setVerifying(true);
+    try {
+      const { data } = await api.post("/auth/verify-password", { password: verifyPasswordText });
+      if (data.success) {
+        setShowPasswordVerification(false);
+        setVerifyPasswordText("");
+        setShowAiSettings(true);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Incorrect password. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
 
 
@@ -48,6 +74,20 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
 
   useEffect(() => {
     fetchRequestCount();
+
+    const handleOpenSettingsAi = () => {
+      setShowPasswordVerification(true);
+    };
+
+    if (sessionStorage.getItem("open_settings_ai") === "true") {
+      sessionStorage.removeItem("open_settings_ai");
+      setShowPasswordVerification(true);
+    }
+
+    window.addEventListener("open-settings-ai", handleOpenSettingsAi);
+    return () => {
+      window.removeEventListener("open-settings-ai", handleOpenSettingsAi);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -99,6 +139,13 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
       desc: "Theme Mode, Chat Wallpaper background settings",
       icon: MessageSquare,
       action: () => setShowThemeBackground(true),
+    },
+    {
+      id: "ai",
+      title: "AI Assistant",
+      desc: "Configure your custom Gemini API Key",
+      icon: Sparkles,
+      action: () => setShowPasswordVerification(true),
     },
     {
       id: "help",
@@ -271,6 +318,59 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
           currentUserId={currentUser.id || currentUser._id}
           onOpenChat={onOpenChat}
         />
+      )}
+      {showAiSettings && (
+        <AiSettingsDrawer onClose={() => setShowAiSettings(false)} />
+      )}
+      {showPasswordVerification && (
+        <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none animate-slide-in">
+          {/* HEADER */}
+          <div className="h-[60px] bg-app-header flex items-center p-4 gap-4 border-b border-app-border shrink-0">
+            <button
+              onClick={() => {
+                setShowPasswordVerification(false);
+                setVerifyPasswordText("");
+              }}
+              className="p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <span className="text-app-text-primary font-semibold text-lg">Identity Verification</span>
+          </div>
+
+          {/* BODY */}
+          <div className="flex-1 flex flex-col justify-center items-center p-6 space-y-6">
+            <div className="w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center text-brand">
+              <Lock size={28} />
+            </div>
+
+            <div className="text-center space-y-2 max-w-sm">
+              <h3 className="text-base font-bold text-app-text-primary">Confirm Your Password</h3>
+              <p className="text-xs text-app-text-secondary leading-normal">
+                To access your sensitive AI Assistant settings and API keys, please verify your identity by entering your password.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyPasswordSubmit} className="w-full max-w-sm space-y-4">
+              <input
+                type="password"
+                placeholder="Enter your account password"
+                value={verifyPasswordText}
+                onChange={(e) => setVerifyPasswordText(e.target.value)}
+                className="w-full bg-app-input text-app-text-primary text-sm rounded-xl p-3.5 border border-app-border outline-none focus:border-brand transition text-center"
+                autoFocus
+              />
+
+              <button
+                type="submit"
+                disabled={verifying}
+                className="w-full bg-brand hover:opacity-90 text-white font-semibold py-3.5 rounded-xl transition cursor-pointer text-sm shadow-md"
+              >
+                {verifying ? "Verifying..." : "Verify Password"}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

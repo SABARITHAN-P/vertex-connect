@@ -91,7 +91,7 @@ exports.createConversation = async (req, res) => {
     const defaultModel = isCloudMode ? "gemini-2.5-flash" : "gemma:latest";
     const conversation = await AiConversation.create({
       user: userId,
-      title: title || "New AI Chat",
+      title: title || "New Chat",
       model: model || defaultModel,
       temperature: temperature !== undefined ? temperature : 0.7,
     });
@@ -220,6 +220,30 @@ exports.sendMessage = async (req, res) => {
         attachments,
       });
 
+      // Auto-name conversation title if it is default
+      if ((conversation.title === "New AI Chat" || conversation.title === "New Chat") && content) {
+        const lines = content.split("\n");
+        let titleLine = "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith("```") && !trimmed.startsWith("`") && !trimmed.startsWith("[")) {
+            titleLine = trimmed;
+            break;
+          }
+        }
+        if (!titleLine) {
+          titleLine = content.trim().split("\n")[0].trim();
+        }
+        
+        let autoTitle = titleLine.replace(/^[#\s*`_\-\[\]]+/g, "").trim();
+        if (autoTitle.length > 35) {
+          autoTitle = autoTitle.substring(0, 32) + "...";
+        }
+        if (autoTitle) {
+          conversation.title = autoTitle;
+        }
+      }
+
       // Update conversation timestamp
       conversation.updatedAt = new Date();
       await conversation.save();
@@ -321,10 +345,17 @@ CRITICAL SAFETY RULE: You must absolutely refuse to respond to any sensitive, un
       return;
     }
 
-    // 5. Cloud mode routing (if GEMINI_API_KEY is present)
-    if (isCloudMode) {
+    // 5. Cloud mode routing (if GEMINI_API_KEY or user-provided key is present)
+    const userApiKey = req.headers["x-gemini-key"];
+    const runCloudMode = isCloudMode || !!userApiKey;
+
+    if (runCloudMode) {
       console.log("Routing request to Gemini Cloud...");
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      let apiKey = (userApiKey || process.env.GEMINI_API_KEY || "").trim();
+      if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+        apiKey = apiKey.slice(1, -1).trim();
+      }
+      const genAI = new GoogleGenerativeAI(apiKey);
       let modelName = conversation.model.includes("gemini") ? conversation.model : "gemini-2.5-flash";
       if (modelName.includes("gemini-1.5")) {
         modelName = modelName.replace("gemini-1.5", "gemini-2.5");
@@ -415,7 +446,19 @@ CRITICAL SAFETY RULE: You must absolutely refuse to respond to any sensitive, un
           console.error("Failed to write to file log:", e);
         }
         if (!res.writableEnded) {
-          res.write(`data: ${JSON.stringify({ error: "Gemini stream error occurred" })}\n\n`);
+          let userFriendlyError = `⚠️ **Gemini API Error**: I couldn't generate a response.\n\n`;
+          const errMsg = streamErr.message || "";
+          
+          if (errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID") || errMsg.includes("key is invalid")) {
+            userFriendlyError += `The API key provided is invalid. Please open the main **Settings** (gear icon in the bottom-left sidebar), go to **AI Assistant**, and double-check your custom API key.`;
+          } else if (errMsg.includes("429") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("limit")) {
+            userFriendlyError += `The API key has exceeded its rate limit or quota. Please wait a minute before trying again, or go to the main **Settings** (gear icon in the bottom-left sidebar), select **AI Assistant**, and provide your own Gemini API key.`;
+          } else {
+            userFriendlyError += `Details: *${errMsg || "An unknown error occurred during generation."}*`;
+          }
+
+          res.write(`data: ${JSON.stringify({ token: userFriendlyError })}\n\n`);
+          res.write(`data: ${JSON.stringify({ done: true, error: true })}\n\n`);
           res.end();
         }
       }
@@ -526,7 +569,10 @@ Please make sure:
 exports.getModels = async (req, res) => {
   const cacheKey = "ai:models";
 
-  if (isCloudMode) {
+  const userApiKey = req.headers["x-gemini-key"];
+  const runCloudMode = isCloudMode || !!userApiKey;
+
+  if (runCloudMode) {
     return res.status(200).json({
       ollamaConnected: false,
       isCloud: true,

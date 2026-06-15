@@ -34,6 +34,19 @@ function Sidebar({
   const [aiConversations, setAiConversations] = useState([]);
   const [editingAiId, setEditingAiId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showCalls, setShowCalls] = useState(false);
+  const [globalUsers, setGlobalUsers] = useState([]);
+  const [imgError, setImgError] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null); // { x: number, y: number, chat: object }
+  const [pinnedChatIds, setPinnedChatIds] = useState(() => {
+    return JSON.parse(localStorage.getItem("pinned_chats") || "[]");
+  });
+  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
+  const [showLockedOnly, setShowLockedOnly] = useState(false);
 
   const fetchAiConversations = async () => {
     try {
@@ -52,21 +65,37 @@ function Sidebar({
       fetchAiConversations();
     };
 
+    const handleOpenSettingsAi = () => {
+      setShowSettings(true);
+    };
+
     window.addEventListener("ai-conversations-updated", handleUpdateEvent);
+    window.addEventListener("open-settings-ai", handleOpenSettingsAi);
     return () => {
       window.removeEventListener("ai-conversations-updated", handleUpdateEvent);
+      window.removeEventListener("open-settings-ai", handleOpenSettingsAi);
     };
   }, []);
 
   const handleCreateAiConversation = async () => {
+    // Check if there is already an empty/unstarted conversation
+    const existingEmpty = aiConversations.find(
+      (c) => c.title === "New Chat" || c.title === "New AI Chat"
+    );
+
+    if (existingEmpty) {
+      handleOpenAiConversation(existingEmpty);
+      return;
+    }
+
     try {
       const { data } = await api.post("/ai/conversations", {
-        title: "New AI Chat",
+        title: "New Chat",
         model: "gemma:latest"
       });
       setAiConversations(prev => [data, ...prev]);
       handleOpenAiConversation(data);
-      toast.success("New AI conversation created!");
+      toast.success("New conversation created!");
     } catch (err) {
       console.error(err);
       toast.error("Failed to create AI conversation");
@@ -104,11 +133,7 @@ function Sidebar({
     }
   };
 
-  const handleStartRename = (e, conv) => {
-    e.stopPropagation();
-    setEditingAiId(conv._id);
-    setEditingTitle(conv.title);
-  };
+
 
   const handleSaveRename = async (convId) => {
     if (!editingTitle.trim()) return;
@@ -133,24 +158,6 @@ function Sidebar({
 
   // Centralized ESC key support: clear search query on Escape. Priority: 5
   useEscapeKey(() => setSearch(""), search.trim() !== "", 5);
-  const [loadingChat, setLoadingChat] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showCalls, setShowCalls] = useState(false);
-  const [globalUsers, setGlobalUsers] = useState([]);
-
-  const [imgError, setImgError] = useState(false);
-
-  // Context Menu & Deletion/Clearance State
-  const [contextMenu, setContextMenu] = useState(null); // { x: number, y: number, chat: object }
-  const [pinnedChatIds, setPinnedChatIds] = useState(() => {
-    return JSON.parse(localStorage.getItem("pinned_chats") || "[]");
-  });
-
-  // Folder states
-  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
-  const [showLockedOnly, setShowLockedOnly] = useState(false);
 
   const [requestCount, setRequestCount] = useState(0);
   const [showFollowRequests, setShowFollowRequests] = useState(false);
@@ -306,12 +313,12 @@ function Sidebar({
   /* =========================
      CONTEXT MENU ACTIONS
   ========================== */
-  const handleContextMenu = (e, chat) => {
+  const handleContextMenu = (e, chat, isAi = false) => {
     e.preventDefault();
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
-      chat,
+      chat: isAi ? { ...chat, isAiChat: true } : chat,
     });
   };
 
@@ -1012,7 +1019,7 @@ function Sidebar({
               className="mx-4 my-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand/90 text-white font-semibold text-xs rounded-xl transition cursor-pointer select-none shadow-sm shrink-0 border border-transparent"
             >
               <Plus size={14} />
-              <span>New AI Chat</span>
+              <span>New Chat</span>
             </button>
 
             {/* LIST */}
@@ -1025,21 +1032,13 @@ function Sidebar({
                   <div
                     key={c._id}
                     onClick={() => !isEditing && handleOpenAiConversation(c)}
-                    className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none transition group relative ${
+                    onContextMenu={(e) => handleContextMenu(e, c, true)}
+                    className={`flex items-center px-4 py-3 cursor-pointer select-none transition group relative ${
                       isActive ? "bg-app-active" : "hover:bg-app-hover/50"
                     }`}
                   >
-                    {/* Left icon */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
-                      isActive 
-                        ? "bg-brand/20 border-brand/30 text-brand" 
-                        : "bg-app-input border-app-border text-app-text-secondary"
-                    }`}>
-                      <Sparkles size={16} />
-                    </div>
-
                     {/* Middle Content */}
-                    <div className="flex-1 min-w-0 flex flex-col text-left">
+                    <div className="flex-1 min-w-0 flex flex-col text-left py-0.5">
                       {isEditing ? (
                         <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                           <input
@@ -1067,38 +1066,11 @@ function Sidebar({
                           </button>
                         </div>
                       ) : (
-                        <>
-                          <span className="font-semibold text-sm text-app-text-primary truncate">
-                            {c.title}
-                          </span>
-                          <span className="text-[10px] text-app-text-secondary mt-0.5 truncate font-mono uppercase tracking-wider">
-                            {c.model}
-                          </span>
-                        </>
+                        <span className="font-semibold text-sm text-app-text-primary truncate">
+                          {c.title}
+                        </span>
                       )}
                     </div>
-
-                    {/* Action buttons (Visible on hover) */}
-                    {!isEditing && (
-                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity pl-4 py-2 ${
-                        isActive ? "bg-app-active" : "bg-app-sidebar group-hover:bg-app-hover/50"
-                      }`}>
-                        <button
-                          onClick={(e) => handleStartRename(e, c)}
-                          className="p-1.5 text-app-text-secondary hover:text-app-text-primary rounded-lg hover:bg-app-hover transition cursor-pointer"
-                          title="Rename"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          onClick={(e) => handleDeleteAiConversation(e, c._id)}
-                          className="p-1.5 text-red-500 hover:text-red-400 rounded-lg hover:bg-app-hover transition cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -1156,134 +1128,170 @@ function Sidebar({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Section 1: General Actions */}
-          <div className="space-y-0.5">
-            {/* Pin / Unpin Chat */}
-            {(() => {
-              const isPinned = contextMenu.chat.pinnedBy?.some(p => p.user.toString() === currentUserId) || pinnedChatIds.includes(contextMenu.chat._id);
-              return (
-                <button
-                  onClick={() => handlePinChat(contextMenu.chat)}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
-                >
-                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                    {isPinned ? <PinOff size={13} /> : <Pin size={13} className="rotate-45" />}
-                  </div>
-                  <span className="font-medium text-xs">
-                    {isPinned ? "Unpin Chat" : "Pin Chat"}
-                  </span>
-                </button>
-              );
-            })()}
+          {contextMenu.chat.isAiChat ? (
+            <div className="space-y-0.5">
+              {/* Rename AI Chat */}
+              <button
+                onClick={() => {
+                  setEditingAiId(contextMenu.chat._id);
+                  setEditingTitle(contextMenu.chat.title);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+              >
+                <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <Pencil size={13} />
+                </div>
+                <span className="font-medium text-xs">Rename Chat</span>
+              </button>
 
-            {/* Archive / Unarchive Chat */}
-            {(() => {
-              const isArchived = contextMenu.chat.archivedBy?.some(a => a.user.toString() === currentUserId);
-              return (
-                <button
-                  onClick={() => handleArchiveChat(contextMenu.chat)}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
-                >
-                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                    {isArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
-                  </div>
-                  <span className="font-medium text-xs">
-                    {isArchived ? "Unarchive Chat" : "Archive Chat"}
-                  </span>
-                </button>
-              );
-            })()}
+              {/* Delete AI Chat */}
+              <button
+                onClick={() => {
+                  const id = contextMenu.chat._id;
+                  setContextMenu(null);
+                  handleDeleteAiConversation(null, id);
+                }}
+                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/5 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2.5 text-red-500 dark:text-red-400 cursor-pointer"
+              >
+                <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-red-500/10 text-red-600 dark:text-red-400">
+                  <Trash2 size={13} />
+                </div>
+                <span className="font-medium text-xs">Delete Chat</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Section 1: General Actions */}
+              <div className="space-y-0.5">
+                {/* Pin / Unpin Chat */}
+                {(() => {
+                  const isPinned = contextMenu.chat.pinnedBy?.some(p => p.user.toString() === currentUserId) || pinnedChatIds.includes(contextMenu.chat._id);
+                  return (
+                    <button
+                      onClick={() => handlePinChat(contextMenu.chat)}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        {isPinned ? <PinOff size={13} /> : <Pin size={13} className="rotate-45" />}
+                      </div>
+                      <span className="font-medium text-xs">
+                        {isPinned ? "Unpin Chat" : "Pin Chat"}
+                      </span>
+                    </button>
+                  );
+                })()}
 
-            {/* Lock / Unlock Chat */}
-            {(() => {
-              const isLocked = contextMenu.chat.lockedBy?.some(l => l.user.toString() === currentUserId);
-              return (
-                <button
-                  onClick={() => handleLockUnlockClick(contextMenu.chat, isLocked ? "unlock" : "lock")}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
-                >
-                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    {isLocked ? <Unlock size={13} /> : <Lock size={13} />}
-                  </div>
-                  <span className="font-medium text-xs">
-                    {isLocked ? "Unlock Chat" : "Lock Chat"}
-                  </span>
-                </button>
-              );
-            })()}
+                {/* Archive / Unarchive Chat */}
+                {(() => {
+                  const isArchived = contextMenu.chat.archivedBy?.some(a => a.user.toString() === currentUserId);
+                  return (
+                    <button
+                      onClick={() => handleArchiveChat(contextMenu.chat)}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                        {isArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+                      </div>
+                      <span className="font-medium text-xs">
+                        {isArchived ? "Unarchive Chat" : "Archive Chat"}
+                      </span>
+                    </button>
+                  );
+                })()}
 
-            {/* Mark as Read / Unread */}
-            {(() => {
-              const isMarkedUnread = contextMenu.chat.markedUnreadBy?.some(u => u.user.toString() === currentUserId);
-              return (
-                <button
-                  onClick={() => handleToggleMarkUnread(contextMenu.chat)}
-                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
-                >
-                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                    {isMarkedUnread ? <MailOpen size={13} /> : <Mail size={13} />}
-                  </div>
-                  <span className="font-medium text-xs">
-                    {isMarkedUnread ? "Mark as Read" : "Mark as Unread"}
-                  </span>
-                </button>
-              );
-            })()}
-          </div>
+                {/* Lock / Unlock Chat */}
+                {(() => {
+                  const isLocked = contextMenu.chat.lockedBy?.some(l => l.user.toString() === currentUserId);
+                  return (
+                    <button
+                      onClick={() => handleLockUnlockClick(contextMenu.chat, isLocked ? "unlock" : "lock")}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                        {isLocked ? <Unlock size={13} /> : <Lock size={13} />}
+                      </div>
+                      <span className="font-medium text-xs">
+                        {isLocked ? "Unlock Chat" : "Lock Chat"}
+                      </span>
+                    </button>
+                  );
+                })()}
 
-          {/* Section 2: Block / Unblock User (1-to-1 only) */}
-          {!contextMenu.chat.isGroupChat && (() => {
-            const otherUser = contextMenu.chat.participants.find((p) => p._id !== currentUserId);
-            const isBlocked = currentUser.blockedUsers?.some(
-              (id) => id.toString() === otherUser?._id.toString()
-            );
-            return (
+                {/* Mark as Read / Unread */}
+                {(() => {
+                  const isMarkedUnread = contextMenu.chat.markedUnreadBy?.some(u => u.user.toString() === currentUserId);
+                  return (
+                    <button
+                      onClick={() => handleToggleMarkUnread(contextMenu.chat)}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                    >
+                      <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                        {isMarkedUnread ? <MailOpen size={13} /> : <Mail size={13} />}
+                      </div>
+                      <span className="font-medium text-xs">
+                        {isMarkedUnread ? "Mark as Read" : "Mark as Unread"}
+                      </span>
+                    </button>
+                  );
+                })()}
+              </div>
+
+              {/* Section 2: Block / Unblock User (1-to-1 only) */}
+              {!contextMenu.chat.isGroupChat && (() => {
+                const otherUser = contextMenu.chat.participants.find((p) => p._id !== currentUserId);
+                const isBlocked = currentUser.blockedUsers?.some(
+                  (id) => id.toString() === otherUser?._id.toString()
+                );
+                return (
+                  <div className="border-t border-app-border/40 my-0.5 pt-0.5 space-y-0.5">
+                    <button
+                      onClick={() => handleToggleBlockUser(contextMenu.chat)}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
+                    >
+                      <div className={`flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${isBlocked ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"}`}>
+                        {isBlocked ? <UserCheck size={13} /> : <UserX size={13} />}
+                      </div>
+                      <span className="font-medium text-xs">
+                        {isBlocked ? "Unblock User" : "Block User"}
+                      </span>
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {/* Section 3: Destructive Actions */}
               <div className="border-t border-app-border/40 my-0.5 pt-0.5 space-y-0.5">
+                {/* Clear Chat */}
                 <button
-                  onClick={() => handleToggleBlockUser(contextMenu.chat)}
+                  onClick={() => {
+                    setContextMenu(null);
+                    handleClearChat(contextMenu.chat);
+                  }}
                   className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
                 >
-                  <div className={`flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${isBlocked ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"}`}>
-                    {isBlocked ? <UserCheck size={13} /> : <UserX size={13} />}
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Eraser size={13} />
                   </div>
-                  <span className="font-medium text-xs">
-                    {isBlocked ? "Unblock User" : "Block User"}
-                  </span>
+                  <span className="font-medium text-xs">Clear Chat</span>
+                </button>
+
+                {/* Delete Chat */}
+                <button
+                  onClick={() => {
+                    setContextMenu(null);
+                    handleDeleteChat(contextMenu.chat);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/5 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2.5 text-red-500 dark:text-red-400 cursor-pointer"
+                >
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-red-500/10 text-red-600 dark:text-red-400">
+                    <Trash2 size={13} />
+                  </div>
+                  <span className="font-semibold text-xs">Delete Chat</span>
                 </button>
               </div>
-            );
-          })()}
-
-          {/* Section 3: Destructive Actions */}
-          <div className="border-t border-app-border/40 my-0.5 pt-0.5 space-y-0.5">
-            {/* Clear Chat */}
-            <button
-              onClick={() => {
-                setContextMenu(null);
-                handleClearChat(contextMenu.chat);
-              }}
-              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-app-hover transition-colors flex items-center gap-2.5 text-app-text-primary cursor-pointer"
-            >
-              <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Eraser size={13} />
-              </div>
-              <span className="font-medium text-xs">Clear Chat</span>
-            </button>
-
-            {/* Delete Chat */}
-            <button
-              onClick={() => {
-                setContextMenu(null);
-                handleDeleteChat(contextMenu.chat);
-              }}
-              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/5 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2.5 text-red-500 dark:text-red-400 cursor-pointer"
-            >
-              <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-red-500/10 text-red-600 dark:text-red-400">
-                <Trash2 size={13} />
-              </div>
-              <span className="font-semibold text-xs">Delete Chat</span>
-            </button>
-          </div>
+            </>
+          )}
         </div>
       )}
 
