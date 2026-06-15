@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import api from "@services/api";
 import logo from "@assets/vite.svg";
+import { useBackButton } from "@hooks/useBackButton";
 import MessageBubble from "@components/features/chat/MessageBubble";
 import MessageInput from "@components/features/chat/MessageInput";
 import PinnedMessagesBanner from "@components/features/chat/PinnedMessagesBanner";
@@ -67,6 +68,12 @@ function ChatWindow({
   const [showMuteModal, setShowMuteModal] = useState(false);
   const [passcodePrompt, setPasscodePrompt] = useState(null); // null | { type: 'lock' | 'unlock' }
   const [passcodeValue, setPasscodeValue] = useState("");
+
+  useBackButton(() => setShowDrawer(false), showDrawer, "chat-group-drawer");
+  useBackButton(() => setShowSearch(false), showSearch, "chat-search-panel");
+  useBackButton(() => setIsMediaViewerOpen(false), isMediaViewerOpen, "chat-media-viewer");
+  useBackButton(() => setPasscodePrompt(null), passcodePrompt !== null, "chat-passcode-prompt");
+  useBackButton(() => setShowMuteModal(false), showMuteModal, "chat-mute-modal");
 
   // Centralized ESC handling in ChatWindow: close search inside group/chat on ESC
   useEscapeKey(() => {
@@ -1071,7 +1078,7 @@ function ChatWindow({
                 e.stopPropagation();
                 setSelectedUser(null);
               }}
-              className="md:hidden p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer shrink-0 mr-3"
+              className="hidden sm:inline-flex md:hidden p-1.5 text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover rounded-full transition cursor-pointer shrink-0 mr-3"
               title="Back to Sidebar"
             >
               <ArrowLeft size={20} />

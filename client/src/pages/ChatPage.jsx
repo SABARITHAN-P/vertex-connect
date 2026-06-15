@@ -7,6 +7,7 @@ import AiAssistantWindow from "@components/features/ai/AiAssistantWindow";
 import UserProfileModal from "@components/features/social/UserProfileModal";
 import CallOverlay from "@components/features/calls/CallOverlay";
 import { useTheme } from "@context/ThemeContext";
+import { useBackButton } from "@hooks/useBackButton";
 
 function ChatPage() {
   const { fetchAppearance } = useTheme();
@@ -29,6 +30,9 @@ function ChatPage() {
 
   /* VIEWING USER PROFILE MODAL */
   const [viewingUserProfile, setViewingUserProfile] = useState(null);
+
+  useBackButton(() => setSelectedUser(null), !!selectedUser, "active-chat");
+  useBackButton(() => setViewingUserProfile(null), !!viewingUserProfile, "user-profile-modal");
 
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem("userInfo")) || {});
   const currentUserRef = useRef(currentUser);

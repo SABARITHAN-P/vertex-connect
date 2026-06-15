@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "@services/api";
 import ConversationItem from "@components/features/chat/ConversationItem";
+import { useBackButton } from "@hooks/useBackButton";
 import CreateGroupModal from "@components/features/group/CreateGroupModal";
 import ProfileSettingsDrawer from "@components/features/settings/ProfileSettingsDrawer";
 import SettingsDrawer from "@components/features/settings/SettingsDrawer";
@@ -154,6 +155,12 @@ function Sidebar({
   const [requestCount, setRequestCount] = useState(0);
   const [showFollowRequests, setShowFollowRequests] = useState(false);
   const [unseenMissedCalls, setUnseenMissedCalls] = useState(0);
+
+  useBackButton(() => setShowProfile(false), showProfile, "sidebar-profile");
+  useBackButton(() => setShowSettings(false), showSettings, "sidebar-settings");
+  useBackButton(() => setShowFollowRequests(false), showFollowRequests, "sidebar-follow-requests");
+  useBackButton(() => setShowCalls(false), showCalls, "sidebar-calls");
+  useBackButton(() => setShowCreateGroup(false), showCreateGroup, "sidebar-create-group");
 
   const fetchRequestCount = async () => {
     try {
