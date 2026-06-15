@@ -110,7 +110,7 @@ const updateAppearanceSettings = async (req, res) => {
     const updatedAppearance = await UserAppearance.findOneAndUpdate(
       { user: req.user._id },
       { $set: updateFields },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     // 2. Update Cache

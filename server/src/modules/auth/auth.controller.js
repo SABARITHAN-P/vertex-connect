@@ -345,7 +345,7 @@ const resetPassword = async (req, res) => {
       {
         password: hashedPassword,
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (updatedUser) {

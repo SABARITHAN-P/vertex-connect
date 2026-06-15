@@ -24,7 +24,6 @@ const calculateFileHash = async (file) => {
 function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyToMsg, setReplyToMsg, setUploadQueue }) {
   const { enterToSend, soundsEnabled } = useTheme();
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
   const [typing, setTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -189,48 +188,74 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
     if (!message.trim()) return;
     const messageToSend = message;
 
+    // Clear input instantly to allow immediate typing of the next message
+    setMessage("");
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
+
+    if (soundsEnabled) {
+      playSentSound();
+    }
+
+    clearTimeout(typingTimeoutRef.current);
+    const currentUserId = currentUser.id || currentUser._id;
+    if (selectedUser.isGroupChat) {
+      socket.emit("group:typing-stop", {
+        chatId: selectedUser.chatId,
+        senderId: currentUserId,
+      });
+    } else {
+      socket.emit("stopTyping", {
+        chatId: selectedUser.chatId,
+        receiverId: selectedUser._id,
+        senderId: currentUserId,
+      });
+    }
+    setTyping(false);
+
+    // Create optimistic message
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const replyToObj = buildReplyToObj();
+    setReplyToMsg(null); // Clear reply layout instantly
+
+    const optimisticMessage = {
+      _id: tempId,
+      optimistic: true,
+      sender: {
+        _id: currentUserId,
+        username: currentUser.username,
+        avatar: currentUser.avatar,
+      },
+      createdAt: new Date(),
+      content: messageToSend,
+      messageType: "text",
+      replyTo: replyToObj,
+      reactions: [],
+      messageStatus: [],
+    };
+
+    // Render immediately in chat messages list and sidebar
+    setMessages((prev) => [...prev, optimisticMessage]);
+    updateSidebarLatestMessage(optimisticMessage);
+
     try {
-      setLoading(true);
-      setMessage("");
-      setReplyToMsg(null); // clear reply
-
-      if (inputRef.current) {
-        inputRef.current.style.height = "auto";
-      }
-
-      if (soundsEnabled) {
-        playSentSound();
-      }
-
-      clearTimeout(typingTimeoutRef.current);
-      if (selectedUser.isGroupChat) {
-        socket.emit("group:typing-stop", {
-          chatId: selectedUser.chatId,
-          senderId: currentUser.id,
-        });
-      } else {
-        socket.emit("stopTyping", {
-          chatId: selectedUser.chatId,
-          receiverId: selectedUser._id,
-          senderId: currentUser.id,
-        });
-      }
-      setTyping(false);
-
       const { data } = await api.post("/message", {
         chatId: selectedUser.chatId,
         content: messageToSend,
         messageType: "text",
-        replyTo: buildReplyToObj(),
+        replyTo: replyToObj,
       });
 
-      setMessages((prev) => [...prev, data]);
+      // Replace optimistic message with actual data once saved in database
+      setMessages((prev) => prev.map((msg) => (msg._id === tempId ? data : msg)));
       updateSidebarLatestMessage(data);
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      // Remove optimistic message and restore input text if sending failed
+      setMessages((prev) => prev.filter((msg) => msg._id !== tempId));
       setMessage(messageToSend);
-    } finally {
-      setLoading(false);
+      premiumAlert("Failed to Send", "Your message could not be sent.", "error");
     }
   };
 
@@ -596,11 +621,11 @@ function MessageInput({ selectedUser, setMessages, currentUser, setChats, replyT
 
 
               {message.trim() ? (
-                <button onClick={handleSend} disabled={loading} className="bg-brand hover:opacity-90 p-3 rounded-full transition shrink-0 shadow-md">
+                <button onClick={handleSend} className="bg-brand hover:opacity-90 p-3 rounded-full transition shrink-0 shadow-md">
                   <SendHorizonal size={20} className="text-white" />
                 </button>
               ) : (
-                <button onClick={() => setIsRecording(true)} disabled={loading} className="bg-brand hover:opacity-90 p-3 rounded-full transition shrink-0 shadow-md">
+                <button onClick={() => setIsRecording(true)} className="bg-brand hover:opacity-90 p-3 rounded-full transition shrink-0 shadow-md">
                   <Mic size={20} className="text-white" />
                 </button>
               )}

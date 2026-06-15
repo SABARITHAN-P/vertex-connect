@@ -672,13 +672,13 @@ function MessageBubble({ own, message, isGroup, onReply, onViewMedia, onEdit, on
             className={`relative overflow-hidden select-none transition-all duration-300 transform active:scale-98 ${isDoubleTapped
                 ? "scale-95 border-2 border-brand shadow-[0_0_15px_rgba(79,70,229,0.45)] ring-4 ring-brand/20 brightness-110"
                 : "hover:brightness-105"
-              } ${isSticker
+              } ${message.optimistic ? "opacity-60" : ""} ${isSticker
                 ? "bg-transparent text-app-text-primary"
                 : own ? "message-bubble-padding premium-bubble-outgoing text-app-bubble-outgoing-text rounded-2xl px-4 py-2.5 min-w-[120px]" : "message-bubble-padding premium-bubble-incoming text-app-text-primary rounded-2xl px-4 py-2.5 min-w-[120px]"
               }`}
           >
             {/* OPTIMISTIC UPLOAD OVERLAY */}
-            {(message.optimistic || uploadState) && (
+            {(message.optimistic || uploadState) && messageType !== "text" && (
               <div className="absolute inset-0 z-20 backdrop-blur-sm bg-black/45 flex flex-col items-center justify-center gap-2 p-3 transition-all duration-300">
                 {isFailed ? (
                   <div className="text-center space-y-1.5 animate-fade-in">

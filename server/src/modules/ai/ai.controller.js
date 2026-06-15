@@ -116,7 +116,7 @@ exports.renameConversation = async (req, res) => {
     const conversation = await AiConversation.findOneAndUpdate(
       { _id: id, user: userId },
       { title },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!conversation) {

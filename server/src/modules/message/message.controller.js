@@ -319,7 +319,7 @@ const sendMessage = async (req, res) => {
             chatType: chatDetails.isGroupChat ? "group" : "private",
             lastReadMessageId: populatedMessage._id
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: 'after' }
         );
 
         // Emit real-time unreadCount update
@@ -515,7 +515,7 @@ const markAsDelivered = async (req, res) => {
           }
         }
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (updated) {

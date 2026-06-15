@@ -77,7 +77,7 @@ const updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { username: trimmedUsername, status, about: status },
-      { new: true }
+      { returnDocument: 'after' }
     ).select("-password");
 
     // Invalidate Redis chats cache for all users sharing a chat with this user
@@ -127,7 +127,7 @@ const updateAvatar = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { avatar: avatarUrl },
-      { new: true }
+      { returnDocument: 'after' }
     ).select("-password");
 
     try {
@@ -166,7 +166,7 @@ const removeAvatar = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { avatar: "" },
-      { new: true }
+      { returnDocument: 'after' }
     ).select("-password");
 
     try {
@@ -217,7 +217,7 @@ const blockUser = async (req, res) => {
     await Block.findOneAndUpdate(
       { blocker: req.user._id, blocked: userId },
       { blocker: req.user._id, blocked: userId },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Delete any Follow relationships between the blocker and the blocked user

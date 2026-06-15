@@ -282,7 +282,7 @@ const getChats = async (req, res) => {
               }
             }
           },
-          { new: true }
+          { returnDocument: 'after' }
         );
 
         if (updatedMsg) {
@@ -1229,7 +1229,7 @@ const deleteChat = async (req, res) => {
     await Unread.findOneAndUpdate(
       { userId, chatId },
       { unreadCount: 0 },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Invalidate Redis caches
@@ -1289,7 +1289,7 @@ const clearChat = async (req, res) => {
     await Unread.findOneAndUpdate(
       { userId, chatId },
       { unreadCount: 0 },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Invalidate Redis caches
