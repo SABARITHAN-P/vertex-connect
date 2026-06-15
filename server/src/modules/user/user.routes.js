@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { searchUsers, updateProfile, updateAvatar, removeAvatar, blockUser, unblockUser, getBlockedUsers, sendFeedbackEmail } = require("./user.controller");
+const { searchUsers, updateProfile, updateAvatar, removeAvatar, blockUser, unblockUser, getBlockedUsers, sendFeedbackEmail, updateAiApiKey } = require("./user.controller");
 const { toggleFollow, getFollowStatus, getFollowersList, getFollowingList, getFollowRequests, acceptFollowRequest, rejectFollowRequest, removeFollower } = require("./follow.controller");
 const { getPrivacySettings, updatePrivacySettings } = require("./privacy.controller");
 const { getAppearanceSettings, updateAppearanceSettings, uploadWallpaperImage } = require("./appearance.controller");
@@ -10,6 +10,7 @@ const upload = require("../../middleware/uploadMiddleware");
 
 router.get("/search", protect, searchUsers);
 router.put("/profile", protect, updateProfile);
+router.put("/ai-key", protect, updateAiApiKey);
 router.put("/avatar", protect, upload.single("avatar"), updateAvatar);
 router.delete("/avatar", protect, removeAvatar);
 

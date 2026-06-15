@@ -120,8 +120,11 @@ export default function AiAssistantWindow({ conversation, onClose }) {
 
     if (generating) return;
 
+    const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    const customGeminiKey = userInfo.customAiApiKey || localStorage.getItem("vertex_custom_gemini_key");
+
     // Check if custom key is set before sending message
-    if (!localStorage.getItem("vertex_custom_gemini_key")) {
+    if (!customGeminiKey) {
       toast.error("Please add your Gemini API Key in Settings to start chatting.");
       sessionStorage.setItem("open_settings_ai", "true");
       window.dispatchEvent(new CustomEvent("open-settings-ai"));
@@ -130,7 +133,6 @@ export default function AiAssistantWindow({ conversation, onClose }) {
 
     // Build payload details
     const attachments = attachedFile ? [attachedFile] : [];
-    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
     const token = userInfo?.token;
 
     setGenerating(true);
@@ -165,7 +167,6 @@ export default function AiAssistantWindow({ conversation, onClose }) {
     abortControllerRef.current = new AbortController();
 
     try {
-      const customGeminiKey = localStorage.getItem("vertex_custom_gemini_key");
       const headers = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
@@ -373,7 +374,10 @@ export default function AiAssistantWindow({ conversation, onClose }) {
               ))}
             </div>
             
-            {!localStorage.getItem("vertex_custom_gemini_key") ? (
+            {!(
+              JSON.parse(localStorage.getItem("userInfo") || "{}").customAiApiKey ||
+              localStorage.getItem("vertex_custom_gemini_key")
+            ) ? (
               <div className="mt-8 bg-brand/5 border border-brand/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
                 <div className="flex items-start gap-3 text-left">
                   <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0 mt-0.5">

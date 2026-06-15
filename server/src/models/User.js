@@ -46,6 +46,10 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    customAiApiKey: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,

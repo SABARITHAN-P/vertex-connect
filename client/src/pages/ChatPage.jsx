@@ -12,6 +12,7 @@ import { useBackButton } from "@hooks/useBackButton";
 function ChatPage() {
   const { fetchAppearance } = useTheme();
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   /* CHATS */
   const [chats, setChats] = useState([]);
@@ -618,7 +619,8 @@ function ChatPage() {
         className={`
           ${selectedUser ? "hidden md:flex" : "flex"}
           w-full
-          md:w-[380px]
+          transition-all duration-300
+          ${isSidebarExpanded ? "md:w-[520px]" : "md:w-[380px]"}
           border-r
           border-app-border
           h-full
@@ -638,6 +640,8 @@ function ChatPage() {
           setArchivedChats={setArchivedChats}
           lockedChats={lockedChats}
           setLockedChats={setLockedChats}
+          isExpanded={isSidebarExpanded}
+          setIsExpanded={setIsSidebarExpanded}
         />
       </div>
 

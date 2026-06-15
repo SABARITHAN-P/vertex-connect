@@ -327,6 +327,37 @@ Sent via Vertex Connect App Support Portal.`;
   }
 };
 
+const updateAiApiKey = async (req, res) => {
+  try {
+    const { customAiApiKey } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { customAiApiKey: customAiApiKey || "" },
+      { returnDocument: 'after' }
+    ).select("-password");
+
+    // Invalidate Redis profile cache so subsequent requests load the updated key
+    await redisClient.del(`user:profile:${req.user._id}`);
+
+    res.status(200).json({
+      message: "AI API Key updated successfully",
+      user: {
+        id: updatedUser._id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar,
+        status: updatedUser.status,
+        about: updatedUser.about,
+        customAiApiKey: updatedUser.customAiApiKey || "",
+      }
+    });
+  } catch (error) {
+    console.error("Error updating AI API Key:", error);
+    res.status(500).json({ message: "Failed to update AI API Key" });
+  }
+};
+
 module.exports = {
   searchUsers,
   updateProfile,
@@ -336,4 +367,5 @@ module.exports = {
   unblockUser,
   getBlockedUsers,
   sendFeedbackEmail,
+  updateAiApiKey,
 };

@@ -25,7 +25,7 @@ import { useEscapeKey } from "@hooks/useEscapeKey";
 import { premiumConfirm } from "@utils/alert";
 import toast from "react-hot-toast";
 
-function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
+function SettingsDrawer({ onClose, currentUser, setCurrentUser, onOpenProfile, onOpenChat }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showPrivacySettings, setShowPrivacySettings] = useState(false);
   const [showFollowRequests, setShowFollowRequests] = useState(false);
@@ -320,7 +320,11 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
         />
       )}
       {showAiSettings && (
-        <AiSettingsDrawer onClose={() => setShowAiSettings(false)} />
+        <AiSettingsDrawer
+          onClose={() => setShowAiSettings(false)}
+          currentUser={currentUser}
+          setCurrentUser={setCurrentUser}
+        />
       )}
       {showPasswordVerification && (
         <div className="absolute inset-0 bg-app-drawer text-app-text-primary z-50 flex flex-col transition-transform duration-300 transform translate-x-0 select-none animate-slide-in">

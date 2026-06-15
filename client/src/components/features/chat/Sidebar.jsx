@@ -6,7 +6,7 @@ import CreateGroupModal from "@components/features/group/CreateGroupModal";
 import ProfileSettingsDrawer from "@components/features/settings/ProfileSettingsDrawer";
 import SettingsDrawer from "@components/features/settings/SettingsDrawer";
 import FollowRequestsDrawer from "@components/features/social/FollowRequestsDrawer";
-import { Search, Users, Pin, PinOff, Archive, ArchiveRestore, Lock, Unlock, CheckCheck, MailOpen, Mail, UserX, Eraser, Trash2, ArrowLeft, UserCheck, Phone, Sparkles, Pencil, MessageSquare, Plus, Sun, Moon, Settings, UserPlus, X } from "lucide-react";
+import { Search, Users, Pin, PinOff, Archive, ArchiveRestore, Lock, Unlock, CheckCheck, MailOpen, Mail, UserX, Eraser, Trash2, ArrowLeft, UserCheck, Phone, Sparkles, Pencil, MessageSquare, Plus, Sun, Moon, Settings, UserPlus, X, Menu } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import CallsDrawer from "@components/features/calls/CallsDrawer";
 import toast from "react-hot-toast";
@@ -25,7 +25,9 @@ function Sidebar({
   currentUser,
   setCurrentUser,
   archivedChats = [],
-  lockedChats = []
+  lockedChats = [],
+  isExpanded,
+  setIsExpanded
 }) {
   const [search, setSearch] = useState("");
   const { theme, updateAppearance } = useTheme();
@@ -645,36 +647,69 @@ function Sidebar({
   return (
     <div className="flex w-full bg-app-sidebar text-app-text-primary h-full relative border-r border-app-border">
       
-      {/* LEFT NAVIGATION RAIL (SLIM DOCK) */}
-      <div className="w-[60px] bg-app-sidebar-rail border-r border-app-border flex flex-col justify-between items-center py-4.5 shrink-0 select-none">
+      {/* LEFT NAVIGATION RAIL (COLLAPSIBLE DOCK) */}
+      <div className={`bg-app-sidebar-rail border-r border-app-border flex flex-col justify-between py-4.5 shrink-0 select-none transition-all duration-300 ${
+        isExpanded ? "w-[200px] items-start px-3" : "w-[60px] items-center"
+      }`}>
         
         {/* Top Rail Items */}
-        <div className="flex flex-col items-center gap-6 w-full">
+        <div className={`flex flex-col gap-6 w-full ${isExpanded ? "items-start" : "items-center"}`}>
+          {/* Menu Toggle Button */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+              isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+            } text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40`}
+            title={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            <Menu size={20} className="shrink-0" />
+            {isExpanded && (
+              <span className="text-sm font-semibold truncate animate-fade-in">
+                Collapse
+              </span>
+            )}
+          </button>
+
           <div
             onClick={() => setShowProfile(true)}
-            className={`w-10 h-10 rounded-full bg-brand flex items-center justify-center overflow-hidden cursor-pointer hover:scale-105 transition-all shadow-md relative group border-2 ${
+            className={`cursor-pointer hover:scale-105 transition-all relative group flex items-center ${
+              isExpanded ? "w-full gap-3 px-1" : ""
+            }`}
+          >
+            <div className={`w-10 h-10 rounded-full bg-brand flex items-center justify-center overflow-hidden shadow-md border-2 shrink-0 ${
               showProfile ? "border-app-text-primary scale-105" : "border-app-border"
             }`}
             title="Profile Settings"
-          >
-            {currentUser.avatar && !imgError ? (
-              <img 
-                src={currentUser.avatar} 
-                alt="Profile" 
-                className="w-full h-full object-cover" 
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <span className="text-white font-bold text-sm">
-                {currentUser.username?.charAt(0).toUpperCase() || "?"}
-              </span>
+            >
+              {currentUser.avatar && !imgError ? (
+                <img 
+                  src={currentUser.avatar} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover" 
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <span className="text-white font-bold text-sm">
+                  {currentUser.username?.charAt(0).toUpperCase() || "?"}
+                </span>
+              )}
+            </div>
+            {isExpanded && (
+              <div className="flex flex-col min-w-0 pr-1 animate-fade-in">
+                <span className="text-sm font-semibold truncate text-app-text-primary">
+                  {currentUser.username || "My Profile"}
+                </span>
+                <span className="text-[10px] text-app-text-secondary truncate">
+                  View Profile
+                </span>
+              </div>
             )}
           </div>
 
-          <div className="w-8 h-[1px] bg-app-border/60 my-0.5" />
+          <div className={`h-[1px] bg-app-border/60 my-0.5 transition-all duration-300 ${isExpanded ? "w-full" : "w-8"}`} />
 
           {/* Tab Navigation Icons */}
-          <div className="flex flex-col gap-3.5 w-full items-center">
+          <div className={`flex flex-col gap-3.5 w-full ${isExpanded ? "items-start" : "items-center"}`}>
             {/* Chats Tab */}
             <button
               onClick={() => {
@@ -682,18 +717,31 @@ function Sidebar({
                 setShowArchivedOnly(false);
                 setShowLockedOnly(false);
               }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all duration-200 cursor-pointer ${
+              className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+                isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+              } ${
                 activeTab === "chats" && !showArchivedOnly && !showLockedOnly
                   ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                   : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
               }`}
               title="Chats"
             >
-              <MessageSquare size={20} />
-              {totalPrivateUnreads > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
-                  {totalPrivateUnreads > 99 ? "99+" : totalPrivateUnreads}
-                </span>
+              <MessageSquare size={20} className="shrink-0" />
+              {isExpanded && (
+                <span className="text-sm font-semibold truncate animate-fade-in">Chats</span>
+              )}
+              {isExpanded ? (
+                totalPrivateUnreads > 0 && (
+                  <span className="ml-auto bg-brand text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow shadow-brand/30 shrink-0">
+                    {totalPrivateUnreads > 99 ? "99+" : totalPrivateUnreads}
+                  </span>
+                )
+              ) : (
+                totalPrivateUnreads > 0 && (
+                  <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
+                    {totalPrivateUnreads > 99 ? "99+" : totalPrivateUnreads}
+                  </span>
+                )
               )}
             </button>
 
@@ -704,18 +752,31 @@ function Sidebar({
                 setShowArchivedOnly(false);
                 setShowLockedOnly(false);
               }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all duration-200 cursor-pointer ${
+              className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+                isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+              } ${
                 activeTab === "groups" && !showArchivedOnly && !showLockedOnly
                   ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                   : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
               }`}
               title="Groups"
             >
-              <Users size={20} />
-              {totalGroupUnreads > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
-                  {totalGroupUnreads > 99 ? "99+" : totalGroupUnreads}
-                </span>
+              <Users size={20} className="shrink-0" />
+              {isExpanded && (
+                <span className="text-sm font-semibold truncate animate-fade-in">Groups</span>
+              )}
+              {isExpanded ? (
+                totalGroupUnreads > 0 && (
+                  <span className="ml-auto bg-brand text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow shadow-brand/30 shrink-0">
+                    {totalGroupUnreads > 99 ? "99+" : totalGroupUnreads}
+                  </span>
+                )
+              ) : (
+                totalGroupUnreads > 0 && (
+                  <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
+                    {totalGroupUnreads > 99 ? "99+" : totalGroupUnreads}
+                  </span>
+                )
               )}
             </button>
 
@@ -726,14 +787,19 @@ function Sidebar({
                 setShowArchivedOnly(false);
                 setShowLockedOnly(false);
               }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all duration-200 cursor-pointer ${
+              className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+                isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+              } ${
                 activeTab === "ai" && !showArchivedOnly
                   ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                   : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
               }`}
               title="AI Assistant"
             >
-              <Sparkles size={20} />
+              <Sparkles size={20} className="shrink-0" />
+              {isExpanded && (
+                <span className="text-sm font-semibold truncate animate-fade-in">AI Assistant</span>
+              )}
             </button>
 
             {/* Archived Tab (Conditional) */}
@@ -743,32 +809,42 @@ function Sidebar({
                   setShowArchivedOnly(true);
                   setShowLockedOnly(false);
                 }}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all duration-200 cursor-pointer ${
+                className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+                  isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+                } ${
                   showArchivedOnly
                     ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                     : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
                 }`}
                 title="Archived Chats"
               >
-                <Archive size={20} />
+                <Archive size={20} className="shrink-0" />
+                {isExpanded && (
+                  <span className="text-sm font-semibold truncate animate-fade-in">Archived</span>
+                )}
               </button>
             )}
           </div>
         </div>
 
         {/* Bottom Rail Items */}
-        <div className="flex flex-col items-center gap-4 w-full">
+        <div className={`flex flex-col gap-4 w-full ${isExpanded ? "items-start" : "items-center"}`}>
           {/* Quick Action: New Group */}
           <button
             onClick={() => setShowCreateGroup(true)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+            className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+              isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+            } ${
               showCreateGroup
                 ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                 : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
             }`}
             title="New Group Chat"
           >
-            <UserPlus size={18} />
+            <UserPlus size={18} className="shrink-0" />
+            {isExpanded && (
+              <span className="text-sm font-semibold truncate animate-fade-in">New Group</span>
+            )}
           </button>
 
           {/* Call Logs Tab */}
@@ -777,61 +853,99 @@ function Sidebar({
               setUnseenMissedCalls(0);
               setShowCalls(true);
             }}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative cursor-pointer ${
+            className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+              isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+            } ${
               showCalls
                 ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                 : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
             }`}
             title="Call Logs"
           >
-            <Phone size={18} />
-            {unseenMissedCalls > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-red-500/30 animate-pulse">
-                {unseenMissedCalls}
-              </span>
+            <Phone size={18} className="shrink-0" />
+            {isExpanded && (
+              <span className="text-sm font-semibold truncate animate-fade-in">Call Logs</span>
+            )}
+            {isExpanded ? (
+              unseenMissedCalls > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow shadow-red-500/30 shrink-0">
+                  {unseenMissedCalls}
+                </span>
+              )
+            ) : (
+              unseenMissedCalls > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-red-500/30 animate-pulse">
+                  {unseenMissedCalls}
+                </span>
+              )
             )}
           </button>
 
           {/* Follow Requests Tab */}
           <button
             onClick={() => setShowFollowRequests(true)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative cursor-pointer ${
+            className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+              isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+            } ${
               showFollowRequests
                 ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                 : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
             }`}
             title="Follow Requests"
           >
-            <UserCheck size={18} />
-            {requestCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
-                {requestCount}
-              </span>
+            <UserCheck size={18} className="shrink-0" />
+            {isExpanded && (
+              <span className="text-sm font-semibold truncate animate-fade-in">Follow Requests</span>
+            )}
+            {isExpanded ? (
+              requestCount > 0 && (
+                <span className="ml-auto bg-brand text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow shadow-brand/30 shrink-0">
+                  {requestCount}
+                </span>
+              )
+            ) : (
+              requestCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-brand text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full shadow shadow-brand/30 animate-pulse">
+                  {requestCount}
+                </span>
+              )
             )}
           </button>
 
-          <div className="w-8 h-[1px] bg-app-border/60 my-0.5" />
+          <div className={`h-[1px] bg-app-border/60 my-0.5 transition-all duration-300 ${isExpanded ? "w-full" : "w-8"}`} />
 
           {/* Quick Theme Toggle */}
           <button
             onClick={() => updateAppearance({ themeMode: theme === "dark" ? "light" : "dark" })}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40 transition-all duration-200 cursor-pointer"
+            className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+              isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+            } text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40`}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === "dark" ? <Sun size={18} className="shrink-0" /> : <Moon size={18} className="shrink-0" />}
+            {isExpanded && (
+              <span className="text-sm font-semibold truncate animate-fade-in">
+                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+              </span>
+            )}
           </button>
 
           {/* Settings Tab */}
           <button
             onClick={() => setShowSettings(true)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+            className={`h-10 rounded-xl flex items-center relative transition-all duration-200 cursor-pointer ${
+              isExpanded ? "w-full px-3 justify-start gap-3" : "w-10 justify-center"
+            } ${
               showSettings
                 ? "text-app-text-primary dark:text-white bg-app-hover/40 scale-105"
                 : "text-app-text-secondary hover:text-app-text-primary hover:bg-app-hover/40"
             }`}
             title="Settings"
           >
-            <Settings size={18} />
+            <Settings size={18} className="shrink-0" />
+            {isExpanded && (
+              <span className="text-sm font-semibold truncate animate-fade-in">Settings</span>
+            )}
           </button>
         </div>
       </div>
@@ -1023,7 +1137,7 @@ function Sidebar({
             </button>
 
             {/* LIST */}
-            <div className="flex-1 overflow-y-auto space-y-0.5 select-none">
+            <div className="flex-1 overflow-y-auto select-none">
               {filteredAiConversations.map((c) => {
                 const isActive = selectedUser?.isAiChat && selectedUser._id === c._id;
                 const isEditing = editingAiId === c._id;
@@ -1033,10 +1147,17 @@ function Sidebar({
                     key={c._id}
                     onClick={() => !isEditing && handleOpenAiConversation(c)}
                     onContextMenu={(e) => handleContextMenu(e, c, true)}
-                    className={`flex items-center px-4 py-3 cursor-pointer select-none transition group relative ${
-                      isActive ? "bg-app-active" : "hover:bg-app-hover/50"
+                    className={`flex items-center px-4 py-3.5 cursor-pointer select-none transition border-b border-app-border group relative ${
+                      isActive ? "bg-app-active" : "hover:bg-app-hover/65 bg-transparent"
                     }`}
                   >
+                    {/* Left Sparkles Avatar */}
+                    <div className="shrink-0 mr-3">
+                      <div className="w-11 h-11 rounded-full bg-brand/10 dark:bg-brand/20 flex items-center justify-center text-brand dark:text-indigo-300 border border-app-border/40 shadow-sm">
+                        <Sparkles size={18} className="animate-pulse text-brand dark:text-indigo-400" />
+                      </div>
+                    </div>
+
                     {/* Middle Content */}
                     <div className="flex-1 min-w-0 flex flex-col text-left py-0.5">
                       {isEditing ? (
@@ -1104,6 +1225,7 @@ function Sidebar({
         <SettingsDrawer
           onClose={() => setShowSettings(false)}
           currentUser={currentUser}
+          setCurrentUser={setCurrentUser}
           onOpenProfile={() => setShowProfile(true)}
           onOpenChat={setSelectedUser}
         />

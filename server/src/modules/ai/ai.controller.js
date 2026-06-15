@@ -347,7 +347,7 @@ CRITICAL SAFETY RULE: You must absolutely refuse to respond to any sensitive, un
     }
 
     // 5. Cloud mode routing (if GEMINI_API_KEY or user-provided key is present)
-    const userApiKey = req.headers["x-gemini-key"];
+    const userApiKey = req.headers["x-gemini-key"] || req.user?.customAiApiKey;
     const runCloudMode = isCloudMode || !!userApiKey;
 
     if (runCloudMode) {

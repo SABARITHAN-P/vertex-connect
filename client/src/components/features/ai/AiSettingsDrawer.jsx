@@ -2,21 +2,37 @@ import { useState } from "react";
 import { ArrowLeft, Key, ExternalLink, HelpCircle } from "lucide-react";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import toast from "react-hot-toast";
+import api from "@services/api";
 
-export default function AiSettingsDrawer({ onClose }) {
-  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem("vertex_custom_gemini_key") || "");
+export default function AiSettingsDrawer({ onClose, currentUser, setCurrentUser }) {
+  const [customApiKey, setCustomApiKey] = useState(
+    currentUser?.customAiApiKey || localStorage.getItem("vertex_custom_gemini_key") || ""
+  );
   const [loading, setLoading] = useState(false);
 
   // Close on Escape key
   useEscapeKey(onClose, true, 5);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     setLoading(true);
     try {
       const trimmedKey = customApiKey.trim();
+      
+      // Save key to the server database
+      await api.put("/user/ai-key", { customAiApiKey: trimmedKey });
+      
+      // Update local storage userInfo object
+      const userInfoLocal = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const updatedUser = { ...userInfoLocal, customAiApiKey: trimmedKey };
+      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+      
+      // Update global React context state
+      setCurrentUser?.(updatedUser);
+
+      // Legacy fallback
       if (trimmedKey) {
         localStorage.setItem("vertex_custom_gemini_key", trimmedKey);
-        toast.success("Custom Gemini API Key saved!");
+        toast.success("Custom Gemini API Key saved & synced across devices!");
       } else {
         localStorage.removeItem("vertex_custom_gemini_key");
         toast.success("Custom key removed. Using default server key.");
@@ -24,7 +40,7 @@ export default function AiSettingsDrawer({ onClose }) {
       onClose();
     } catch (err) {
       console.error("Failed to save AI key:", err);
-      toast.error("Failed to save settings");
+      toast.error(err.response?.data?.message || "Failed to save settings");
     } finally {
       setLoading(false);
     }

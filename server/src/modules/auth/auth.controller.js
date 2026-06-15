@@ -157,6 +157,7 @@ const registerUser = async (req, res) => {
         avatar: newUser.avatar,
         status: newUser.status,
         about: newUser.about,
+        customAiApiKey: newUser.customAiApiKey || "",
       },
     });
   } catch (error) {
@@ -212,6 +213,7 @@ const loginUser = async (req, res) => {
         avatar: user.avatar,
         status: user.status,
         about: user.about,
+        customAiApiKey: user.customAiApiKey || "",
       },
     });
   } catch (error) {
