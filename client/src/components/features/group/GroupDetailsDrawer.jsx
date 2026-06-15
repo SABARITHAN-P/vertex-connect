@@ -350,6 +350,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
     setLoading(true);
     let successCount = 0;
     let lastUpdatedData = null;
+    let errorMsg = "";
 
     for (const userObj of selectedUsersToAdd) {
       try {
@@ -358,6 +359,7 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
         successCount++;
       } catch (err) {
         console.error(`Failed to add ${userObj.username}:`, err);
+        errorMsg = err.response?.data?.message || `Failed to add ${userObj.username}`;
       }
     }
 
@@ -370,8 +372,14 @@ function GroupDetailsDrawer({ chat, onlineUsers = [], onClose, onGroupUpdated, o
       showFeedback(setSuccess, `Added ${successCount} member(s) successfully`);
     } else if (successCount > 0) {
       showFeedback(setSuccess, `Added ${successCount} out of ${selectedUsersToAdd.length} members`);
+      if (errorMsg) {
+        premiumAlert("Some Additions Restricted", errorMsg, "error");
+      }
     } else {
       showFeedback(setError, "Failed to add selected members");
+      if (errorMsg) {
+        premiumAlert("Addition Restricted", errorMsg, "error");
+      }
     }
 
     setSelectedUsersToAdd([]);

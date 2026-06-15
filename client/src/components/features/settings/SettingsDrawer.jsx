@@ -121,7 +121,7 @@ function SettingsDrawer({ onClose, currentUser, onOpenProfile, onOpenChat }) {
     {
       id: "privacy",
       title: "Privacy",
-      desc: "Blocked contacts, last seen, online status, photo visibility",
+      desc: "Who can add you to groups, blocked contacts, last seen status",
       icon: Lock,
       action: () => setShowPrivacySettings(true),
     },

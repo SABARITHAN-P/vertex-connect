@@ -299,16 +299,16 @@ function PrivacySettingsDrawer({ onClose }) {
               <Users size={18} />
             </div>
             <div>
-              <h3 className="text-app-text-primary font-bold text-xs uppercase tracking-wider">Group Additions</h3>
-              <p className="text-app-text-secondary text-[10px] mt-0.5">Who can add you to group chats.</p>
+              <h3 className="text-app-text-primary font-bold text-xs uppercase tracking-wider">Who Can Add You to Groups</h3>
+              <p className="text-app-text-secondary text-[10px] mt-0.5">Control who can add you to group chats.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 pt-2">
             {[
               { id: "everyone", label: "Everyone" },
-              { id: "followers", label: "Followers Only" },
-              { id: "mutual", label: "Mutual" },
+              { id: "followers", label: "Only Followers" },
+              { id: "mutual", label: "Mutual Followers" },
             ].map((option) => (
               <button
                 key={option.id}
