@@ -20,9 +20,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
+      const clientUrl = process.env.CLIENT_URL
+        ? process.env.CLIENT_URL.replace(/\/$/, "")
+        : null;
+
       const allowedOrigins = [
         /^http:\/\/localhost(:\d+)?$/,
-        process.env.CLIENT_URL
+        clientUrl
       ].filter(Boolean);
       
       const isAllowed = !origin || allowedOrigins.some(pattern => {
@@ -35,6 +39,7 @@ const io = new Server(server, {
       if (isAllowed) {
         callback(null, true);
       } else {
+        console.warn(`Blocked socket connection from unauthorized origin: ${origin}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
