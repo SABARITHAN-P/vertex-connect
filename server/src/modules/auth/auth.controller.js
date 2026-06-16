@@ -55,10 +55,11 @@ const sendOTP = async (req, res) => {
     });
 
     // Send Email
-    await sendEmail(
-      email,
-      "Vertex Connect • OTP Verification",
-      `
+    try {
+      await sendEmail(
+        email,
+        "Vertex Connect • OTP Verification",
+        `
         Hello,
 
         Use the verification code below to securely access your Vertex Connect account:
@@ -71,7 +72,13 @@ const sendOTP = async (req, res) => {
 
         — Vertex Connect Security Team
         `,
-    );
+      );
+    } catch (emailError) {
+      console.error("Failed to send registration OTP email:", emailError);
+      return res.status(500).json({
+        message: "Failed to send verification email. Please check your email address or try again later.",
+      });
+    }
 
     res.status(200).json({
       message: "OTP sent successfully",
@@ -274,23 +281,30 @@ const forgotPassword = async (req, res) => {
     });
 
     // Send Email
-    await sendEmail(
-      email,
-      "Vertex Connect • Password Reset OTP",
-      `
-      Hello,
+    try {
+      await sendEmail(
+        email,
+        "Vertex Connect • Password Reset OTP",
+        `
+        Hello,
 
-      Use the OTP below to reset your Vertex Connect password:
+        Use the OTP below to reset your Vertex Connect password:
 
-      🔐 OTP Code: ${otp}
+        🔐 OTP Code: ${otp}
 
-      This OTP will expire in 5 minutes.
+        This OTP will expire in 5 minutes.
 
-      If you did not request this, ignore this email.
+        If you did not request this, ignore this email.
 
-      — Vertex Connect Security Team
-      `,
-    );
+        — Vertex Connect Security Team
+        `,
+      );
+    } catch (emailError) {
+      console.error("Failed to send password reset OTP email:", emailError);
+      return res.status(500).json({
+        message: "Failed to send password reset email. Please try again later.",
+      });
+    }
 
     res.status(200).json({
       message: "Password reset OTP sent",
