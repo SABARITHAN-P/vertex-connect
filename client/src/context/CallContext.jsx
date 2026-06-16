@@ -6,15 +6,13 @@ import toast from "react-hot-toast";
 
 const CallContext = createContext(null);
 
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
-  ],
-};
+const DEFAULT_ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:19302" },
+];
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useCall = () => useContext(CallContext);
@@ -39,8 +37,49 @@ export const CallProvider = ({ children }) => {
   const timeoutRef = useRef(null);
   const callLoggedRef = useRef(false);
   const callDbIdRef = useRef(null);
+  const iceServersRef = useRef(DEFAULT_ICE_SERVERS);
+  const isFetchingIceRef = useRef(false);
 
   const currentUser = JSON.parse(localStorage.getItem("userInfo")) || {};
+
+  const fetchIceServers = async () => {
+    if (isFetchingIceRef.current || iceServersRef.current.length > DEFAULT_ICE_SERVERS.length) {
+      return;
+    }
+    isFetchingIceRef.current = true;
+    try {
+      console.log("Fetching WebRTC ICE/TURN servers from backend...");
+      const { data } = await api.get("/call/ice-servers");
+      if (data && Array.isArray(data)) {
+        iceServersRef.current = data;
+        console.log("WebRTC ICE/TURN servers configured dynamically:", data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch ICE/TURN servers from backend, falling back to public OpenRelay directly:", err);
+      iceServersRef.current = [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:openrelay.metered.ca:80" },
+        {
+          urls: [
+            "turn:openrelay.metered.ca:80",
+            "turn:openrelay.metered.ca:443",
+            "turn:openrelay.metered.ca:443?transport=tcp"
+          ],
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        }
+      ];
+    } finally {
+      isFetchingIceRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (userInfo) {
+      fetchIceServers();
+    }
+  }, []);
 
   // Clean up streams & peer connection
   const cleanupCall = () => {
@@ -90,7 +129,8 @@ export const CallProvider = ({ children }) => {
     }
 
     console.log(`Creating RTCPeerConnection. Caller: ${isCaller}, Peer: ${peerId}`);
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+    console.log("Using ICE configuration:", iceServersRef.current);
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
     peerConnectionRef.current = pc;
 
     // Add local tracks
@@ -150,6 +190,9 @@ export const CallProvider = ({ children }) => {
 
     const callId = "call_" + Math.random().toString(36).substr(2, 9);
     console.log(`Initiating ${type} call to ${receiver.username} with ID ${callId}`);
+    
+    // Lazy fetch ICE/TURN servers if not loaded yet
+    fetchIceServers();
 
     // Request permissions first
     try {
@@ -347,9 +390,9 @@ export const CallProvider = ({ children }) => {
     }
   };
 
-  const handlersRef = useRef({ createPeerConnection, endCall, handleCallEndByPeer });
+  const handlersRef = useRef({ createPeerConnection, endCall, handleCallEndByPeer, fetchIceServers });
   useEffect(() => {
-    handlersRef.current = { createPeerConnection, endCall, handleCallEndByPeer };
+    handlersRef.current = { createPeerConnection, endCall, handleCallEndByPeer, fetchIceServers };
   });
 
   // Listen to sockets
@@ -357,6 +400,9 @@ export const CallProvider = ({ children }) => {
     // 1. Incoming Call
     socket.on("call:incoming", ({ caller, type, callId, callDbId }) => {
       console.log(`Socket Received: Incoming ${type} call ${callId} from ${caller.username}`);
+      
+      // Lazy fetch ICE/TURN servers if not loaded yet
+      handlersRef.current.fetchIceServers();
       
       if (callState !== "idle") {
         // Automatically reject busy

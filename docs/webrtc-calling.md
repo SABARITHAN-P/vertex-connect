@@ -86,3 +86,26 @@ Instead of downloading static audio files for ringtones and call alerts, the cli
 ### 3. Call Disconnect Beep (`playEndTone`)
 * **Frequency**: Plays a quick, double-descending tone (350 Hz, then 250 Hz).
 * **Timing**: First tone plays for 120ms, followed immediately by the second tone for 100ms.
+
+---
+
+## ICE & TURN NAT Traversal (Cross-Network Compatibility)
+
+To support calls across different networks (such as 4G/5G mobile carriers using Carrier-Grade NAT and strict corporate firewalls), Vertex Connect integrates a dynamic ICE server configuration:
+
+### 1. Dynamic Ephemeral Credentials
+Instead of exposing hardcoded TURN credentials in client-side bundles (which exposes your TURN bandwidth to abuse), the client requests a time-limited configuration from the backend via the authenticated endpoint `GET /api/call/ice-servers`.
+* The backend contacts **Metered.ca** using a secure API Key (`METERED_API_KEY`) and subdomain (`METERED_SUBDOMAIN`) to generate short-lived credentials.
+* The credentials expire automatically after a set period, protecting your infrastructure.
+
+### 2. Zero-Configuration Fallback
+If no API key is specified in the server environment variables, the backend automatically falls back to utilizing the **Open Relay Project**'s public free TURN servers.
+* This ensures that calls on mobile data work out-of-the-box in local development, live-demos, and deployment, without requiring manual registration or configuration.
+
+### 3. Background Pre-Fetching
+To prevent call signaling latency, the client pre-fetches the ICE servers list:
+* During app initialization (upon mounting the `CallProvider` if the user is already authenticated).
+* On call initiation (`initiateCall`).
+* On incoming ring notifications (`call:incoming`).
+
+This guarantees that the ICE configuration is loaded ahead of time and is immediately available when `RTCPeerConnection` is instantiated.

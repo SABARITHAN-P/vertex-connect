@@ -110,6 +110,10 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 GEMINI_API_KEY=
+
+# Optional - For large-scale production TURN bandwidth (falls back to OpenRelay for demos/testing if empty)
+METERED_API_KEY=
+METERED_SUBDOMAIN=
 ```
 
 #### Frontend Client (`client/.env`)
@@ -167,6 +171,9 @@ If the Redis database crashes or goes offline in production, the app does not sh
 
 ### 6. Mobile Back Button Interception
 On mobile devices, clicking the physical back button often exits the web page. To resolve this, a custom back button stack intercepts browser history. When a menu drawer or chat settings panel is open, the back button safely closes that specific panel instead of exiting the app.
+
+### 7. Dynamic WebRTC ICE/TURN Server Negotiation
+WebRTC connections fail on strict corporate/academic firewalls and cellular networks (CGNAT). To resolve this securely, the system negotiates dynamic, short-lived TURN credentials from Metered.ca via a secure backend endpoint, falling back automatically to the public Open Relay Project for zero-configuration, cost-free local testing and live demos.
 
 
 

@@ -5,11 +5,13 @@ const {
   getUnseenMissedCallsCount,
   createCallHistory,
   updateCallHistory,
+  getIceServers,
 } = require("./call.controller");
 const protect = require("../../middleware/authMiddleware");
 
 router.get("/history", protect, getCallHistory);
 router.get("/unseen-count", protect, getUnseenMissedCallsCount);
+router.get("/ice-servers", protect, getIceServers);
 router.post("/history", protect, createCallHistory);
 router.patch("/history/:callId", protect, updateCallHistory);
 

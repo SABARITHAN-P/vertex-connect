@@ -1,5 +1,6 @@
 const CallHistory = require("../../models/CallHistory");
 const Chat = require("../../models/Chat");
+const axios = require("axios");
 const Message = require("../../models/Message");
 const redisClient = require("../../config/redis");
 const { getIO } = require("../../sockets/socket");
@@ -211,9 +212,59 @@ const updateCallHistory = async (req, res) => {
   }
 };
 
+const getIceServers = async (req, res) => {
+  try {
+    const apiKey = process.env.METERED_API_KEY;
+    const subdomain = process.env.METERED_SUBDOMAIN;
+
+    if (apiKey && subdomain) {
+      console.log("Fetching dynamic ICE servers from Metered.ca...");
+      const url = `https://${subdomain}.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`;
+      const response = await axios.get(url);
+      
+      if (response.data && Array.isArray(response.data)) {
+        return res.json(response.data);
+      }
+    }
+    
+    // Fallback if not configured: use OpenRelay free servers + Google STUN
+    console.log("Metered credentials not configured. Falling back to OpenRelay Project...");
+    return res.json([
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:openrelay.metered.ca:80" },
+      {
+        urls: [
+          "turn:openrelay.metered.ca:80",
+          "turn:openrelay.metered.ca:443",
+          "turn:openrelay.metered.ca:443?transport=tcp"
+        ],
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      }
+    ]);
+  } catch (error) {
+    console.error("Failed to fetch TURN credentials, falling back to public STUN/TURN:", error.message);
+    // Secure fallback
+    return res.json([
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:openrelay.metered.ca:80" },
+      {
+        urls: [
+          "turn:openrelay.metered.ca:80",
+          "turn:openrelay.metered.ca:443",
+          "turn:openrelay.metered.ca:443?transport=tcp"
+        ],
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      }
+    ]);
+  }
+};
+
 module.exports = {
   getCallHistory,
   getUnseenMissedCallsCount,
   createCallHistory,
   updateCallHistory,
+  getIceServers,
 };
