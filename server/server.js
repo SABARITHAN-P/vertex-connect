@@ -79,5 +79,47 @@ socketHandler(io);
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // 1. Keep-Alive Ping for Render Free Tier to prevent sleep/spin-down.
+  // Pings the public URL every 10 minutes to reset Render's 15-minute inactivity timer.
+  const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+  if (RENDER_URL) {
+    const axios = require("axios");
+    const intervalMs = 10 * 60 * 1000; // 10 minutes
+    
+    // Start self-pinging
+    setInterval(async () => {
+      try {
+        console.log(`Sending keep-alive self-ping to: ${RENDER_URL}`);
+        await axios.get(RENDER_URL);
+        console.log("Keep-alive self-ping successful.");
+      } catch (error) {
+        console.error("Keep-alive self-ping failed:", error.message);
+      }
+    }, intervalMs);
+  }
+
+  // 2. Keep-Alive for Brevo API Key to prevent 90-day inactivity deactivation.
+  // Makes a simple account lookup call to Brevo every 20 days (within JS 32-bit timer limits).
+  const BREVO_KEY = process.env.BREVO_API_KEY;
+  if (BREVO_KEY) {
+    const axios = require("axios");
+    const twentyDaysMs = 20 * 24 * 60 * 60 * 1000; // 20 days in milliseconds
+    
+    setInterval(async () => {
+      try {
+        console.log("Sending keep-alive check to Brevo API...");
+        await axios.get("https://api.brevo.com/v3/account", {
+          headers: {
+            "api-key": BREVO_KEY,
+            "Accept": "application/json",
+          },
+        });
+        console.log("Brevo API key keep-alive successful.");
+      } catch (error) {
+        console.error("Brevo API key keep-alive failed:", error.response?.data?.message || error.message);
+      }
+    }, twentyDaysMs);
+  }
 });
-// Nodemon trigger reload after axios install
+
