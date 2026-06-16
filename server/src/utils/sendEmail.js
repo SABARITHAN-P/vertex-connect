@@ -112,33 +112,7 @@ const sendEmail = async (to, subject, text) => {
       console.log("Email sent successfully via Brevo REST API:", response.data.messageId);
       return;
     }
-
-    // 3. Tertiary: Check if Resend API is configured (optional tertiary fallback)
-    if (process.env.RESEND_API_KEY) {
-      console.log("Attempting to send email via Resend API...");
-      const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
-      
-      const response = await axios.post(
-        "https://api.resend.com/emails",
-        {
-          from: `Vertex Connect <${fromEmail}>`,
-          to: [to],
-          subject: subject,
-          text: text,
-        },
-        {
-          headers: {
-            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      
-      console.log("Email sent successfully via Resend API:", response.data);
-      return;
-    }
-
-    // 4. Fallback: Standard Nodemailer SMTP (works locally, but blocked on Render Free tier)
+    // 3. Fallback: Standard Nodemailer SMTP (works locally, but blocked on Render Free tier)
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       throw new Error("SMTP email credentials are not configured on the server (EMAIL_USER / EMAIL_PASS).");
     }
