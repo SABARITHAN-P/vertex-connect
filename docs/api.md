@@ -1,0 +1,252 @@
+# API Reference
+
+The Vertex Connect backend exposes a secure REST API. Protected endpoints require a valid JWT token sent in the headers: `Authorization: Bearer <token>`.
+
+---
+
+## Authentication Endpoints (`/api/auth`)
+
+### 1. Send OTP
+* **Method & Route**: `POST /api/auth/send-otp`
+* **Request Body**:
+  ```json
+  {
+    "email": "user@example.com",
+    "username": "johndoe"
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "message": "OTP sent successfully"
+  }
+  ```
+
+### 2. Register User
+* **Method & Route**: `POST /api/auth/register`
+* **Request Body**:
+  ```json
+  {
+    "username": "johndoe",
+    "email": "user@example.com",
+    "password": "securepassword123",
+    "otp": "123456"
+  }
+  ```
+* **Success Response (201 Created)**:
+  ```json
+  {
+    "message": "Registration successful",
+    "token": "eyJhbGciOiJIUzI1NiIsIn...",
+    "user": {
+      "id": "603d2b2f...",
+      "username": "johndoe",
+      "email": "user@example.com",
+      "avatar": "",
+      "status": "offline",
+      "about": "Hey there!"
+    }
+  }
+  ```
+
+---
+
+## Chat Endpoints (`/api/chat`)
+
+### 1. Access or Create 1-to-1 Chat
+* **Method & Route**: `POST /api/chat`
+* **Request Body**:
+  ```json
+  {
+    "userId": "603d2b2f..."
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "_id": "604e2b2f...",
+    "isGroupChat": false,
+    "participants": [
+      { "_id": "603d2b2f...", "username": "johndoe" },
+      { "_id": "603e2b2f...", "username": "janedoe" }
+    ]
+  }
+  ```
+
+### 2. Lock Conversation
+* **Method & Route**: `POST /api/chat/lock/:chatId`
+* **Request Body**:
+  ```json
+  {
+    "passcode": "1234"
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Chat locked successfully"
+  }
+  ```
+
+---
+
+## Message Endpoints (`/api/message`)
+
+### 1. Send Message
+* **Method & Route**: `POST /api/message`
+* **Request Body**:
+  ```json
+  {
+    "chatId": "604e2b2f...",
+    "content": "Hello World!",
+    "messageType": "text",
+    "replyTo": {
+      "messageId": "604f2b2f..."
+    }
+  }
+  ```
+* **Success Response (201 Created)**:
+  ```json
+  {
+    "_id": "604f3b2f...",
+    "chat": "604e2b2f...",
+    "sender": {
+      "_id": "603d2b2f...",
+      "username": "johndoe"
+    },
+    "content": "Hello World!",
+    "messageType": "text",
+    "reactions": [],
+    "messageStatus": []
+  }
+  ```
+
+### 2. Fetch Chat Messages
+* **Method & Route**: `GET /api/message/:chatId`
+* **Headers**: `x-lock-passcode` (required if chat is locked by user)
+* **Success Response (200 OK)**:
+  ```json
+  [
+    {
+      "_id": "604f3b2f...",
+      "content": "Hello World!",
+      "sender": { "_id": "603d2b2f...", "username": "johndoe" }
+    }
+  ]
+  ```
+
+---
+
+## Upload Endpoints (`/api/upload`)
+
+### 1. Check File Hash (Deduplication)
+* **Method & Route**: `GET /api/upload/check/:hash`
+* **Success Response (200 OK - Cache Hit)**:
+  ```json
+  {
+    "exists": true,
+    "media": {
+      "url": "https://res.cloudinary.com/...",
+      "type": "image",
+      "fileName": "landscape.jpg",
+      "fileSize": 102456,
+      "mimeType": "image/jpeg"
+    }
+  }
+  ```
+
+### 2. Upload Media
+* **Method & Route**: `POST /api/upload`
+* **Request Payload**: Multipart Form-Data containing one or multiple files under key `files`.
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "media": [
+      {
+        "url": "https://res.cloudinary.com/...",
+        "type": "image",
+        "fileName": "photo.png",
+        "fileSize": 51200,
+        "mimeType": "image/png"
+      }
+    ]
+  }
+  ```
+
+---
+
+## AI Assistant Endpoints (`/api/ai`)
+
+All AI requests must be authorized via JWT and require the custom header `x-gemini-key` containing a valid Google Gemini API Key.
+
+### 1. Create AI Conversation
+* **Method & Route**: `POST /api/ai/conversations`
+* **Request Body**:
+  ```json
+  {
+    "title": "New Chat"
+  }
+  ```
+* **Success Response (201 Created)**:
+  ```json
+  {
+    "_id": "605c3b2f...",
+    "user": "603d2b2f...",
+    "title": "New Chat",
+    "model": "gemma:latest",
+    "temperature": 0.7,
+    "maxTokens": 2048,
+    "isSaved": false
+  }
+  ```
+
+### 2. Stream AI Message response
+* **Method & Route**: `POST /api/ai/conversations/:id/messages`
+* **Headers**: `x-gemini-key` (required)
+* **Request Body**:
+  ```json
+  {
+    "content": "What is the capital of France?"
+  }
+  ```
+* **Success Response (200 OK)**:
+  * Streams raw text tokens as Server-Sent Events (`Content-Type: text/event-stream`).
+
+### 3. Extract Document Text (Backend-Only / Inactive in UI)
+* **Method & Route**: `POST /api/ai/parse-file`
+* **Request Payload**: Multipart Form-Data with a single file under the key `file` (supports `.pdf`, `.docx`, `.txt`, `.md`).
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "fileName": "document.pdf",
+    "fileSize": 102456,
+    "mimeType": "application/pdf",
+    "extractedText": "Extracted document text content..."
+  }
+  ```
+
+---
+
+## Error Handling Schemes
+
+All API errors return a standard JSON structure to simplify parsing in client applications:
+
+```json
+{
+  "message": "Detailed error description goes here"
+}
+```
+
+### Common HTTP Status Codes
+| Code | Reason | Scenario |
+| :--- | :--- | :--- |
+| **200** | OK | Request succeeded. |
+| **201** | Created | Resource (user, chat, message) successfully created. |
+| **400** | Bad Request | Missing required parameters, invalid OTP, or validation failures. |
+| **401** | Unauthorized | Token expired, missing, or invalid. |
+| **403** | Forbidden | Blocked relationships or access to locked chats without passcode. |
+| **404** | Not Found | Resource (user profile, chat conversation) not found. |
+| **500** | Server Error | Internal errors (e.g. database disconnect, third-party timeout). |
