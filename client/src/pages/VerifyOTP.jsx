@@ -143,6 +143,7 @@ function VerifyOTP() {
             Resend OTP
           </button>
         )}
+        <p className="text-[10px] text-zinc-400 mt-2 font-medium">Tip: If you don't see the code, please check your Spam folder.</p>
       </div>
     </AuthLayout>
   );
