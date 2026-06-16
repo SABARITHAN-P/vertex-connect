@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const QUICK_PROMPTS = [
   { title: "Explain Code", desc: "Understand complex logic", prompt: "Explain the following code and how it works:\n\n```javascript\n\n```" },

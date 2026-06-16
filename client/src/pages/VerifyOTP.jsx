@@ -69,8 +69,8 @@ function VerifyOTP() {
     try {
       setErrors({});
       const response = await api.post("/auth/send-otp", {
-        username: userData.username,
-        email: userData.email,
+        username: userData?.username,
+        email: userData?.email,
       });
 
       toast.success(response.data.message);

@@ -4,7 +4,7 @@ import { X, Mail, Users, Info, ArrowLeft, Shield, Copy, Ban } from "lucide-react
 import { formatLastSeen } from "@utils/dateFormatter";
 import { useEscapeKey } from "@hooks/useEscapeKey";
 import { premiumConfirm } from "@utils/alert";
-import axios from "axios";
+import api from "@services/api";
 import toast from "react-hot-toast";
 
 function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUsers = {}, chats = [], onStartDM }) {
@@ -22,27 +22,18 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
   const fetchFollowStatus = useCallback(async () => {
     if (!user?._id) return;
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
-      };
       const targetId = user._id || user.id;
-      const { data } = await axios.get(`http://localhost:5000/api/user/follow/status/${targetId}`, config);
+      const { data } = await api.get(`/user/follow/status/${targetId}`);
       setFollowStats(data);
     } catch (error) {
       console.error("Failed to fetch follow status:", error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?._id]);
 
   const handleToggleFollow = async () => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
-      };
       const targetId = user._id || user.id;
-      await axios.post(`http://localhost:5000/api/user/follow/${targetId}`, {}, config);
+      await api.post(`/user/follow/${targetId}`);
       await fetchFollowStatus();
     } catch (error) {
       console.error("Follow toggle failed:", error);
@@ -53,12 +44,8 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
     const confirmed = await premiumConfirm("Block User", `Are you sure you want to block ${user.username}?`, "warning");
     if (confirmed) {
       try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const config = {
-          headers: { Authorization: `Bearer ${userInfo.token}` },
-        };
         const targetId = user._id || user.id;
-        await axios.post(`http://localhost:5000/api/user/block/${targetId}`, {}, config);
+        await api.post(`/user/block/${targetId}`);
         await fetchFollowStatus();
       } catch (error) {
         console.error("Block failed:", error);
@@ -68,12 +55,8 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
 
   const handleUnblock = async () => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
-      };
       const targetId = user._id || user.id;
-      await axios.post(`http://localhost:5000/api/user/unblock/${targetId}`, {}, config);
+      await api.post(`/user/unblock/${targetId}`);
       await fetchFollowStatus();
     } catch (error) {
       console.error("Unblock failed:", error);
@@ -85,12 +68,8 @@ function UserProfileModal({ isOpen, onClose, user, onlineUsers = [], lastSeenUse
       setFollowListType(type);
       setFollowListOpen(true);
       setListLoading(true);
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
-      };
       const targetId = user._id || user.id;
-      const { data } = await axios.get(`http://localhost:5000/api/user/follow/${type}/${targetId}`, config);
+      const { data } = await api.get(`/user/follow/${type}/${targetId}`);
       setFollowUsers(data);
     } catch (error) {
       console.error(`Failed to fetch ${type} list:`, error);
