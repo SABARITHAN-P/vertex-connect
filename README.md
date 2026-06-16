@@ -32,7 +32,8 @@ Vertex Connect is designed as a clean, private, and efficient chat application. 
 | **Real-Time Media** | WebRTC API (mesh voice/video), Web Audio API (signal tone synthesis) |
 | **Cloud Storage** | Cloudinary API, Multer (in-memory streams) |
 | **AI Assistants** | Google Gemini API (Cloud LLM - via user keys; backend includes local Ollama fallback) |
-| **Email Delivery** | Google Gmail HTTP API, Brevo HTTP REST API, Nodemailer SMTP |
+| **Email Delivery** | Brevo HTTP REST API (production), Nodemailer SMTP (local fallback) |
+
 | **Deployments** | Vercel (frontend SPA rewrites), Render (backend web service keep-alives) |
 
 ---

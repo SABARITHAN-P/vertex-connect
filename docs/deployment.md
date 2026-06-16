@@ -40,11 +40,11 @@ Configure these variables on the Render dashboard:
 * `JWT_SECRET`: Cryptographically strong random string used to sign JWTs.
 * `CLIENT_URL`: The URL of your Vercel deployment (e.g. `https://vertex-connect.vercel.app`).
 * `RENDER_EXTERNAL_URL`: Set automatically by Render (e.g. `https://vertex-connect-api.onrender.com`).
-* `EMAIL_USER` & `EMAIL_PASS`: SMTP credentials (used as fallback mail delivery).
-* `BREVO_API_KEY`: API key for Brevo HTTP email delivery (primary/fallback REST email option).
-* `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`: Gmail OAuth2 settings (primary HTTP email option).
+* `EMAIL_USER` & `EMAIL_PASS`: SMTP credentials (used as fallback local mail delivery).
+* `BREVO_API_KEY`: API key for Brevo HTTP email delivery (primary production option).
 * `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: Cloudinary integration keys.
 * `GEMINI_API_KEY`: Google Gemini API key for cloud LLM processing.
+
 
 ---
 

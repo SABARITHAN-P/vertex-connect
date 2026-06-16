@@ -22,7 +22,8 @@ sequenceDiagram
     Server->>DB: Check if email/username exists
     Server->>Server: Generate cryptographically secure OTP
     Server->>Redis: Set otp:email = OTP (5 min TTL)
-    Server->>Email: Deliver OTP email (Gmail API / Brevo / SMTP)
+    Server->>Email: Deliver OTP email (Brevo HTTP / Nodemailer SMTP)
+
     Server->>User: Return Success (OTP Sent)
     deactivate Server
     

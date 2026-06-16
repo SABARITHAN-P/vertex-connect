@@ -6,29 +6,26 @@
 
 ## High-Level System Architecture
 
-The following diagram illustrates the interaction between the React frontend client, Node/Express server nodes, MongoDB database, and the Redis cache/broker layer:
+The following diagram illustrates the interaction between the React frontend client, the Express server instance, the MongoDB database, and the Redis cache/broker layer:
 
 ```mermaid
 graph TB
-    Client[React Client] <-->|HTTPS REST / WSS Sockets| LB[Load Balancer]
-    LB <--> Node1[Express Server 1]
-    LB <--> Node2[Express Server 2]
+    Client[React Client] <-->|HTTPS REST / WSS Sockets| Server[Express Server]
     
     subgraph Data Layer
-        Node1 <-->|Mongoose Queries| Mongo[(MongoDB)]
-        Node2 <-->|Mongoose Queries| Mongo
-        
-        Node1 <-->|Pub/Sub & Caching| Redis[(Redis)]
-        Node2 <-->|Pub/Sub & Caching| Redis
+        Server <-->|Mongoose Queries| Mongo[(MongoDB)]
+        Server <-->|Pub/Sub & Caching| Redis[(Redis)]
     end
     
     subgraph Third-Party Integrations
-        Node1 -->|HTTPS| Cloudinary((Cloudinary CDNs))
-        Node2 -->|HTTPS| Gemini((Gemini AI Cloud BYOK))
-        Node1 -->|HTTPS| MailSender((Brevo / Gmail API))
+        Server -->|HTTPS| Cloudinary((Cloudinary CDNs))
+        Server -->|HTTPS| Gemini((Gemini AI Cloud BYOK))
+        Server -->|HTTPS| MailSender((Brevo Email API))
     end
-
 ```
+
+> [!NOTE]
+> **Scalability Design**: Although currently deployed as a single Express server instance on Render, the system implements a Redis Pub/Sub adapter (`@socket.io/redis-adapter`) to allow horizontal scaling (multiple load-balanced server instances) at any time.
 
 ---
 
@@ -43,7 +40,8 @@ To minimize disk reads and optimize latency, the backend leverages Redis for act
 ### 2. Horizontal WebSocket Scaling (Redis Adapter)
 Socket.io maintains connections in-memory on each server node. To support horizontal scaling (running multiple server instances behind a load balancer), the servers integrate `@socket.io/redis-adapter`.
 * All socket events are published to Redis Pub/Sub channels.
-* Redis automatically broadcasts events to other server nodes, ensuring that a user connected to *Server 1* can message or call a user connected to *Server 2* seamlessly.
+* Redis automatically broadcasts events across instances, ensuring that active users can seamlessly exchange messages and call signaling regardless of which server instance they are connected to.
+
 
 ### 3. Active Call Coordination (Mutex-like Lock)
 To prevent users from receiving multiple calls or dial requests simultaneously:
