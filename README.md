@@ -21,18 +21,18 @@ Vertex Connect is designed as a clean, private, and efficient chat application. 
 
 
 
-## Technical Stack
+### Technical Stack
 
 | Layer | Technology |
 | :--- | :--- |
 | **Frontend** | React 19, Tailwind CSS v4, Vite 8, React Router DOM v7 |
-| **Backend** | Node.js, Express 5.2 (REST API), Socket.io (WebSocket gateway) |
-| **Database** | MongoDB (via Mongoose ODM) |
-| **Caching & Broker** | Redis (caching, presence tables, Socket.io Pub/Sub adapter) |
-| **Real-Time Media** | WebRTC API (mesh voice/video), Web Audio API (signal tone synthesis) |
-| **Cloud Storage** | Cloudinary API, Multer (in-memory streams) |
-| **AI Assistants** | Google Gemini API (Cloud LLM - via user keys; backend includes local Ollama fallback) |
-| **Email Delivery** | Brevo HTTP REST API (production), Nodemailer SMTP (local fallback) |
+| **Backend** | Node.js, Express 5.2 (REST API), Socket.io (Real-time gateway) |
+| **Database** | MongoDB (via Mongoose) |
+| **Caching & Broker** | Redis (caching, online status tables, Socket.io Pub/Sub adapter) |
+| **Real-Time Media** | WebRTC API (direct voice/video calls), Web Audio API (generating ringtones using code) |
+| **Cloud Storage** | Cloudinary API, Multer (direct file uploads) |
+| **AI Assistants** | Google Gemini API (Cloud AI via user keys; backend includes local Ollama backup) |
+| **Email Delivery** | Brevo HTTP REST API (production), Nodemailer SMTP (local email backup) |
 
 | **Deployments** | Vercel (frontend SPA rewrites), Render (backend web service keep-alives) |
 
@@ -43,16 +43,16 @@ Vertex Connect is designed as a clean, private, and efficient chat application. 
 
 ```bash
 Vertex Connect/
-├── client/                 # Frontend single page application code and assets
+├── client/                 # Frontend user interface code and assets
 ├── server/                 # Backend API routes, database schemas, and sockets
-├── docs/                   # Detailed project documentation suite
-├── .gitignore              # Multi-tier build cache and secret exclusions
-├── README.md               # Main repository documentation landing page
-└── vercel.json             # Root routing rewrites for Vercel SPA routing
+├── docs/                   # Detailed project documentation guides
+├── .gitignore              # Build cache and secret exclusions
+├── README.md               # Main documentation landing page
+└── vercel.json             # Root routing rules for Vercel static hosting
 ```
-* **`client/`**: Contains the React 19 source code, state contexts, custom hooks, and glassmorphic UI assets.
-* **`server/`**: Houses the Express 5 controllers, socket event handlers, Mongoose schemas, and database configurations.
-* **`docs/`**: Holds the senior-engineer-grade, comprehensive project documentation manuals.
+* **`client/`**: Contains the React 19 source code, state contexts, custom hooks, and user interface files.
+* **`server/`**: Houses the Express 5 controllers, socket event handlers, Mongoose schemas, and database files.
+* **`docs/`**: Holds detailed, easy-to-read guides for the system.
 
 ---
 
@@ -60,15 +60,15 @@ Vertex Connect/
 
 The core architecture, feature mechanics, and setup details are split into dedicated manuals. Explore them in detail here:
 
-* **[System Architecture](docs/architecture.md)**: High-level design, client-server models, and horizontal scaling via Redis Pub/Sub.
-* **[Frontend Architecture](docs/frontend.md)**: React components layout, theme customization engine, and mobile gesture interceptors.
-* **[Backend Architecture](docs/backend.md)**: Express router structures, controller modules, and custom middleware layers.
-* **[Authentication & Security](docs/authentication.md)**: Registration verification, login cycles, password recovery, and secure chat lock hashes.
-* **[API Reference](docs/api.md)**: Payload and response mappings for primary REST endpoints, along with status codes.
-* **[Database Design](docs/database.md)**: Mongoose document structures, entity relations, and caching strategies.
-* **[WebRTC Calling](docs/webrtc-calling.md)**: Socket signaling states, call locking mutexes, and AudioContext tone synthesis.
-* **[AI Assistant](docs/ai-assistant.md)**: Cloud-hosted Gemini conversation setup (BYOK), real-time Google search grounding, and response caching.
-* **[Deployment & Production](docs/deployment.md)**: Environment variable configurations, Vercel SPA setups, and Render free-tier keep-alive pingers.
+* **[System Architecture](docs/architecture.md)**: High-level design, client-server models, and running on multiple servers with Redis.
+* **[Frontend Architecture](docs/frontend.md)**: React components layout, theme settings, and mobile swipe handlers.
+* **[Backend Architecture](docs/backend.md)**: Express routes, controllers, and helper middlewares.
+* **[Authentication & Security](docs/authentication.md)**: Sign up, login, password reset, and locked chats.
+* **[API Reference](docs/api.md)**: Request and response details for all API paths, along with status codes.
+* **[Database Design](docs/database.md)**: Database schemas, relationships, and cache setup.
+* **[WebRTC Calling](docs/webrtc-calling.md)**: Voice/video calling details, call states, and code-generated ringtones.
+* **[AI Assistant](docs/ai-assistant.md)**: Gemini AI setup, Google search capabilities, and caching replies.
+* **[Deployment & Production](docs/deployment.md)**: Environment variables, Vercel static hosting, and Render stay-awake setup.
 
 ---
 
@@ -144,11 +144,11 @@ Vite will compile assets and serve the frontend application at `http://localhost
 
 ## Security Notes
 
-Vertex Connect enforces secure transmission and access protocols across all services:
-* **Stateless Auth**: Accounts are shielded behind HS256 JWT tokens. Expired sessions are caught by client-side API response interceptors.
-* **Bcrypt Hashing**: User credentials and chat passcodes are hashed using Bcrypt with 10 salt rounds before storage.
-* **Privacy Isolation**: User details (avatars, emails, last-seen timestamps) are redacted on the fly in response JSONs based on target privacy constraints.
-* **Chat Lock Encryption**: Locked chats require an active passcode header verification. Passcodes are cleared instantly from memory when browser tabs close.
+Vertex Connect enforces secure transmission and access rules across all services:
+* **Stateless Authentication**: Uses JWT tokens to keep accounts secure. The app automatically detects when a session expires and asks the user to log in again.
+* **Bcrypt Hashing**: Hashes passwords and passcodes 10 times using Bcrypt before saving them to the database, keeping them safe.
+* **Privacy Protection**: Hides sensitive user info (like emails and last-seen times) automatically based on privacy settings before sending it to the client.
+* **Chat Locks**: Locked chats need the correct passcode. Passcodes are deleted from the browser's memory as soon as you close the tab.
 
 ---
 
@@ -186,10 +186,9 @@ The following features are planned to make Vertex Connect even more secure and c
 1. **End-to-End Message Encryption**: Encrypt messages on the sender's device before transmitting them, so that only the receiver can read them, ensuring absolute chat privacy.
 2. **Offline Notifications**: Send push notifications for new messages and incoming calls directly to the user's desktop or mobile device, even when the browser tab is closed.
 3. **Group Voice and Video Calls**: Expand the calling system from 1-on-1 calls to group calls, allowing multiple users to join the same voice or video conversation at the same time.
-4. **GIF & Sticker Integration**: Add a dedicated media picker featuring animated GIF queries (via Giphy/Tenor APIs) and local sticker packs, designed as a smooth glassmorphic drawer with debounced searching and lazy-loaded image lists.
+4. **GIF & Sticker Integration**: Add a media picker for search and send animated GIFs and local sticker packs, designed as a smooth popup panel with instant search and fast-loading images.
 
 ---
-
 
 ## Author
 

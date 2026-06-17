@@ -6,7 +6,7 @@
 
 ## Entity-Relationship Overview
 
-The database connects profiles, real-time message streams, chat statuses, and social relations:
+The database connects user profiles, real-time chat messages, settings, and social features:
 
 ```mermaid
 erDiagram
@@ -30,7 +30,7 @@ erDiagram
 ## Mongoose Schemas & Fields
 
 ### 1. User Schema (`User.js`)
-Stores account profiles, authentication hashes, and user settings:
+Stores user accounts, passwords, and settings:
 * `username`: String (required, unique, indexed, trimmed)
 * `email`: String (required, unique, indexed, trimmed)
 * `password`: String (required, bcrypt hashed)
@@ -42,7 +42,7 @@ Stores account profiles, authentication hashes, and user settings:
 * `customAiApiKey`: String (secure user-provided Gemini key, default: `""`)
 
 ### 2. Chat Schema (`Chat.js`)
-Manages channel settings, group membership details, and access tokens:
+Manages chat settings, group members, and access rules:
 * `chatName`: String (trimmed group chat title)
 * `isGroupChat`: Boolean (default: `false`)
 * `participants`: Array of ObjectIds referencing `User`
@@ -69,7 +69,7 @@ Manages channel settings, group membership details, and access tokens:
 * `markedUnreadBy`: Array of sub-documents containing `user` (ObjectId) and `markedAt` (Date)
 
 ### 3. Message Schema (`Message.js`)
-Handles chat events, content, legacy file fallbacks, reactions, and threaded replies:
+Manages chat messages, media files, emoji reactions, and replies:
 * `chat`: ObjectId referencing `Chat` (required, indexed)
 * `sender`: ObjectId referencing `User` (required)
 * `messageType`: String (enum: `text`, `media`, `image`, `video`, `audio`, `file`, `poll`, default: `text`)
@@ -107,7 +107,7 @@ Handles chat events, content, legacy file fallbacks, reactions, and threaded rep
   * `showVoters`: Boolean (default: `true`)
 
 ### 4. Privacy Settings Schema (`PrivacySettings.js`)
-Configures account boundary settings for social access:
+Configures privacy and social settings:
 * `user`: ObjectId referencing `User` (required, unique)
 * `accountType`: String (enum: `public`, `private`, default: `public`)
 * `messagesPermission`: String (enum: `everyone`, `followers`, `mutual`, `nobody`, default: `everyone`)
@@ -118,7 +118,7 @@ Configures account boundary settings for social access:
 * `emailVisibility`: String (enum: `everyone`, `followers`, `mutual`, `nobody`, default: `everyone`)
 
 ### 5. User Appearance Schema (`UserAppearance.js`)
-Saves chat customizations, fonts, and client behavior configurations:
+Saves chat settings, themes, fonts, and app behavior:
 * `user`: ObjectId referencing `User` (required, unique)
 * `themeMode`: String (enum: `light`, `dark`, default: `dark`)
 * `wallpaperType`: String (enum: `default`, `color`, `gradient`, `custom`, default: `default`)
@@ -132,7 +132,7 @@ Saves chat customizations, fonts, and client behavior configurations:
 * `autoScroll`: Boolean (default: `true`)
 
 ### 6. Unread Schema (`Unread.js`)
-Maintains read-receipts and counters for private/group channels:
+Tracks unread messages for private and group chats:
 * `userId`: ObjectId referencing `User` (required)
 * `chatId`: ObjectId referencing `Chat` (required)
 * `chatType`: String (enum: `private`, `group`, required)
@@ -142,7 +142,7 @@ Maintains read-receipts and counters for private/group channels:
 * **Index**: Unique compound index on `userId` + `chatId`.
 
 ### 7. Uploaded File Schema (`UploadedFile.js`)
-Indices file metadata and content hashes for deduplication:
+Stores file details and hashes to prevent duplicate uploads:
 * `hash`: String (required, unique, indexed SHA-256 string)
 * `url`: String (required CDN link)
 * `type`: String (required)
@@ -176,15 +176,15 @@ Indices file metadata and content hashes for deduplication:
 
 ## Core Database Optimization Decisions
 
-### 1. Database Indexing
-Mongoose indices are set up on high-frequency search properties:
-* **Authentication Lookups**: Unique indexes on `User.username` and `User.email`.
-* **Social Unique Limits**: Unique compound indexes on `Follow` (composite key on `follower` + `following`) and `Block` (`blocker` + `blocked`).
-* **Chat Message Speeds**: `Message.chat` is indexed to optimize conversation history fetches.
-* **Unread Tracker**: Unique compound index on `Unread.userId` + `Unread.chatId`.
+### 1. Database Indexes
+We set up indexes in MongoDB to make searches and queries much faster:
+* **User Searches**: Quick lookups for username and email.
+* **Social Connections**: Quick lookups for follower and blocked relationships.
+* **Chat History**: Quick lookups to load message history instantly.
+* **Unread Counter**: Quick lookups to show unread badges.
 
-### 2. Cache Invalidation Patterns
-To maintain consistency between Redis caches and Mongoose documents, cache invalidations are explicitly run by controllers after any updates:
-* Creating a message deletes the chat list cache `chat:list:<userId>`.
-* Inviting a user or updating group properties deletes the chat metadata cache `chat:meta:<chatId>`.
-* Modifying user follow states clears the follower count cache `follow:status:<userId>`.
+### 2. Cache Clearing
+To keep the Redis cache and MongoDB database in sync, the server automatically clears relevant caches when data changes:
+* Sending a message clears the cached chat list.
+* Updating a group chat clears the cached group settings.
+* Following or unfollowing someone clears the cached follow count.

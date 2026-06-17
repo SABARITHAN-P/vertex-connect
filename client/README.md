@@ -10,15 +10,15 @@ For detailed architecture, state configuration, styling systems, and gesture int
 
 | Technology | Purpose |
 | :--- | :--- |
-| **React 19** | Core UI component lifecycle and virtual DOM management |
-| **Vite 8** | High-performance bundler and development server |
-| **Tailwind CSS v4** | Modern component styling and animation configuration |
-| **React Router DOM v7** | Single Page Application (SPA) routing |
-| **Socket.io Client** | Real-time bidirectional event pipeline |
-| **WebRTC API** | Direct Peer-to-Peer media streaming and connection signaling |
-| **SweetAlert2** | Custom, theme-aware premium dialog windows |
-| **React Easy Crop** | Pre-upload image editor |
-| **Browser Image Compression** | Compresses files on the client side before network transit |
+| **React 19** | Core library for building the user interface |
+| **Vite 8** | Fast tool to build and run the app during development |
+| **Tailwind CSS v4** | CSS framework used to design and style the app |
+| **React Router DOM v7** | Manages page navigation without page reloads |
+| **Socket.io Client** | Handles real-time updates and messages |
+| **WebRTC API** | Direct video and voice calling between users in the browser |
+| **SweetAlert2** | Shows nice popup alerts and notifications that match the theme |
+| **React Easy Crop** | Lets users crop and resize images before uploading |
+| **Browser Image Compression** | Shrinks image sizes in the browser to make uploads faster |
 
 ---
 
@@ -26,52 +26,52 @@ For detailed architecture, state configuration, styling systems, and gesture int
 
 ```bash
 client/
-├── public/                 # Static assets (images, ringtone backups)
+├── public/                 # Static files (icons, ringtone backups)
 ├── src/
-│   ├── assets/             # SVGs, icons, and logo assets
+│   ├── assets/             # Icons, images, and logos
 │   ├── components/         # Reusable layouts and features (AI, Calls, Chat, Group, Settings, Social)
-│   ├── context/            # React Contexts (Call state, custom ThemeProvider)
-│   ├── hooks/              # Custom event interceptors (useBackButton, useEscapeKey)
-│   ├── layouts/            # Page shell frames
-│   ├── pages/              # Routed pages (Login, VerifyOTP, ResetPassword, ChatPage)
-│   ├── services/           # Axios interceptors and central API client
-│   ├── socket/             # Root Socket.io client instance
-│   └── utils/              # Helper utilities (alerts, sound cues, date formatters)
-├── eslint.config.js        # JavaScript code quality guidelines
-├── jsconfig.json           # VSCode import mapping configs
-├── package.json            # Scripts and dependency list
-├── vercel.json             # SPA routing rewrite rules for Vercel deployments
-└── vite.config.js          # Plugin hookups and `@` path aliases
+│   ├── context/            # Context files (managing call state and themes)
+│   ├── hooks/              # Custom hooks (like back-button detection)
+│   ├── layouts/            # Page layout frames
+│   ├── pages/              # App pages (Login, VerifyOTP, ChatPage, etc.)
+│   ├── services/           # API connection settings and helper utilities
+│   ├── socket/             # Main real-time connection setup
+│   └── utils/              # Small helpers (alerts, date formatters, sound generators)
+├── eslint.config.js        # JavaScript code checker rules
+├── jsconfig.json           # VSCode import settings
+├── package.json            # Project dependencies and script commands
+├── vercel.json             # Static routing settings for Vercel
+└── vite.config.js          # Vite project settings
 ```
 
 ---
 
 ## 🚀 Setup & Run Instructions
 
-Ensure your node environment is prepared (Node.js 18+ is recommended).
+Make sure Node.js (version 18 or higher) is installed.
 
 ### 1. Installation
-Install the necessary package modules:
+Install project packages:
 ```bash
 npm install
 ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in this directory or provide system environment parameters:
+### 2. Configure Environment Settings
+Create a `.env` file in this folder and add the following settings:
 ```env
 VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
 ### 3. Run Development Server
-Launch Vite local server:
+Start the development server:
 ```bash
 npm run dev
 ```
 
 ### 4. Build Production Bundle
-Build and minify for static deployments:
+Prepare and optimize the app for production deployment:
 ```bash
 npm run build
 ```
-The output bundle will be generated under the `dist/` directory, ready to serve or host on static services like Vercel.
+The optimized website files will be generated in the `dist/` folder, ready to host on static hosting services like Vercel.

@@ -6,7 +6,7 @@
 
 ## WebRTC Signaling & Connection Flow
 
-WebRTC requires a signaling server to exchange session metadata (SDP offers/answers and ICE candidates) before establishing a direct connection:
+WebRTC needs a signaling server to share setup info (SDP offers/answers and connection routes) before establishing a direct connection between users:
 
 ```mermaid
 sequenceDiagram
@@ -53,59 +53,49 @@ sequenceDiagram
 ## Call Security & Availability Management
 
 ### 1. Privacy Check
-Before routing any call signals, the server executes a privacy verification check (`checkCallPermission`).
-* Calling rights are bound to message permissions.
-* If Bob's account is private, Alice must be a mutual follower.
-* If Bob has set his messaging permission to `followers`, Alice must follow Bob.
-* If a block relationship exists in the `Block` schema (either blocker or blocked), the call is immediately blocked.
+Before starting a call, the server checks if you are allowed to call the other person:
+* Calling rules are the same as messaging rules.
+* If Bob's account is private, Alice must be a follower Bob also follows.
+* If Bob only allows messages/calls from followers, Alice must follow Bob.
+* If either user has blocked the other, the call is blocked immediately.
 
-### 2. Mutex Call Locking in Redis
-To prevent overlapping calls or multiple dial requests:
-* When Alice initiates a call, the server checks Redis keys `active_call:Alice` and `active_call:Bob`.
-* If either exists, the call is blocked, returning a `receiver_busy` or `you_busy` state.
-* If both are free, the server writes active keys:
-  * `active_call:Alice` & `active_call:Bob` (with a 60-second TTL to handle unanswered ringing).
-  * `call_peer:<callId>:Alice` -> `Bob` (and vice versa).
-* When Bob answers, the server extends the `active_call` and `call_peer` keys' TTL to 2 hours.
-* When either Alice or Bob ends the call, these keys are instantly deleted.
+### 2. Preventing Double Calling (Redis Locks)
+To stop users from making or receiving more than one call at a time:
+* When Alice starts a call, the server checks Redis keys `active_call:Alice` and `active_call:Bob`.
+* If either is busy, the call is blocked and returns a "busy" message.
+* If both are free, the server marks both users as busy in Redis for 60 seconds (so the phone can ring).
+* When Bob answers, the busy status is extended for up to 2 hours.
+* When either user hangs up, these keys are deleted immediately.
 
 ---
 
 ## Client-Side Web Audio API Synthesis (`toneSynthesizer.js`)
 
-Instead of downloading static audio files for ringtones and call alerts, the client utilizes the browser's native **Web Audio API** (`AudioContext`) to synthesize wave shapes in real time. This keeps application bundles lightweight and ensures non-jarring audio cues:
+Instead of downloading audio files for ringtones, the app creates sound waves directly in the browser using the Web Audio API. This keeps the app small and makes ringtones play instantly:
 
-### 1. Outgoing Sonar Dial Tone (`playDialTone`)
-* **Frequency**: Alternates dual frequencies (440 Hz + 480 Hz) to create a standard telephone line ringing effect.
-* **Timing**: Alternates 1.5 seconds of sound (utilizing a soft rise/fall gain ramp: `linearRampToValueAtTime`) followed by 2 seconds of silence.
+### 1. Outgoing Dial Tone (`playDialTone`)
+* **Sound**: Alternates between 440 Hz and 480 Hz to sound like a standard phone line.
+* **Timing**: Plays for 1.5 seconds (with a smooth start and end volume), then pauses for 2 seconds.
 
 ### 2. Incoming Ringtone (`playIncomingRingtone`)
-* **Melody**: Plays an ascending arpeggio chord sequence (C-Major/A-Minor progression) using notes C4 (261.63 Hz), E4 (329.63 Hz), G4 (392.00 Hz), C5 (523.25 Hz), and E5 (659.25 Hz).
-* **Timing**: Staggers notes 150ms apart. Loops the sequence every 3 seconds.
+* **Sound**: Plays an ascending C-Major/A-Minor chord sequence (notes C4, E4, G4, C5, E5).
+* **Timing**: Plays each note 150ms apart and loops the ringtone every 3 seconds.
 
-### 3. Call Disconnect Beep (`playEndTone`)
-* **Frequency**: Plays a quick, double-descending tone (350 Hz, then 250 Hz).
-* **Timing**: First tone plays for 120ms, followed immediately by the second tone for 100ms.
+### 3. Call Hang-up Tone (`playEndTone`)
+* **Sound**: Plays a quick double-beep that drops in pitch (350 Hz then 250 Hz).
+* **Timing**: The first beep lasts 120ms, followed immediately by a 100ms beep.
 
 ---
 
-## ICE & TURN NAT Traversal (Cross-Network Compatibility)
+## Connection Settings (ICE & TURN NAT Traversal)
 
-To support calls across different networks (such as 4G/5G mobile carriers using Carrier-Grade NAT and strict corporate firewalls), Vertex Connect integrates a dynamic ICE server configuration:
+To make calls work across different networks (like mobile data or strict firewalls), Vertex Connect gets connection paths dynamically:
 
-### 1. Dynamic Ephemeral Credentials
-Instead of exposing hardcoded TURN credentials in client-side bundles (which exposes your TURN bandwidth to abuse), the client requests a time-limited configuration from the backend via the authenticated endpoint `GET /api/call/ice-servers`.
-* The backend contacts **Metered.ca** using a secure API Key (`METERED_API_KEY`) and subdomain (`METERED_SUBDOMAIN`) to generate short-lived credentials.
-* The credentials expire automatically after a set period, protecting your infrastructure.
+### 1. Dynamic Settings
+To protect bandwidth from abuse, we do not hardcode call server settings. Instead, the frontend requests temporary connection settings from the backend (`GET /api/call/ice-servers`). The backend connects to Metered.ca to generate settings that expire automatically.
 
-### 2. Zero-Configuration Fallback
-If no API key is specified in the server environment variables, the backend automatically falls back to utilizing the **Open Relay Project**'s public free TURN servers.
-* This ensures that calls on mobile data work out-of-the-box in local development, live-demos, and deployment, without requiring manual registration or configuration.
+### 2. Free Backup Server
+If no Metered.ca settings are set up, the app automatically falls back to public free servers from the Open Relay Project. This makes mobile calls work out-of-the-box during local testing and live demos.
 
-### 3. Background Pre-Fetching
-To prevent call signaling latency, the client pre-fetches the ICE servers list:
-* During app initialization (upon mounting the `CallProvider` if the user is already authenticated).
-* On call initiation (`initiateCall`).
-* On incoming ring notifications (`call:incoming`).
-
-This guarantees that the ICE configuration is loaded ahead of time and is immediately available when `RTCPeerConnection` is instantiated.
+### 3. Pre-loading
+To prevent delays when calling, the app loads these connection settings in the background (when the app starts, when making a call, or when receiving a call). This makes the call start instantly.

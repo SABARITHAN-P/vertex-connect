@@ -186,7 +186,7 @@ The Vertex Connect backend exposes a secure REST API. Protected endpoints requir
 
 ## AI Assistant Endpoints (`/api/ai`)
 
-All AI requests must be authorized via JWT and require the custom header `x-gemini-key` containing a valid Google Gemini API Key.
+All AI requests require you to be logged in and require a custom header `x-gemini-key` containing your Google Gemini API Key.
 
 ### 1. Create AI Conversation
 * **Method & Route**: `POST /api/ai/conversations`
@@ -219,7 +219,7 @@ All AI requests must be authorized via JWT and require the custom header `x-gemi
   }
   ```
 * **Success Response (200 OK)**:
-  * Streams raw text tokens as Server-Sent Events (`Content-Type: text/event-stream`).
+  * Sends the text reply piece-by-piece in real-time as it is generated (`Content-Type: text/event-stream`).
 
 ### 3. Extract Document Text (Backend-Only / Inactive in UI)
 * **Method & Route**: `POST /api/ai/parse-file`
@@ -239,7 +239,7 @@ All AI requests must be authorized via JWT and require the custom header `x-gemi
 
 ## Error Handling Schemes
 
-All API errors return a standard JSON structure to simplify parsing in client applications:
+All API errors return a standard JSON structure to make it easy for client applications to read errors:
 
 ```json
 {
@@ -251,9 +251,9 @@ All API errors return a standard JSON structure to simplify parsing in client ap
 | Code | Reason | Scenario |
 | :--- | :--- | :--- |
 | **200** | OK | Request succeeded. |
-| **201** | Created | Resource (user, chat, message) successfully created. |
-| **400** | Bad Request | Missing required parameters, invalid OTP, or validation failures. |
-| **401** | Unauthorized | Token expired, missing, or invalid. |
-| **403** | Forbidden | Blocked relationships or access to locked chats without passcode. |
-| **404** | Not Found | Resource (user profile, chat conversation) not found. |
-| **500** | Server Error | Internal errors (e.g. database disconnect, third-party timeout). |
+| **201** | Created | Resource (like a user, chat, or message) was successfully created. |
+| **400** | Bad Request | Missing settings, wrong OTP, or validation errors. |
+| **401** | Unauthorized | Login token is missing, expired, or invalid. |
+| **403** | Forbidden | You have blocked each other or are trying to open a locked chat without the passcode. |
+| **404** | Not Found | The requested item (like a user or chat) could not be found. |
+| **500** | Server Error | Server errors (like database connection issues or external service timeouts). |

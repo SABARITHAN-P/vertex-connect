@@ -6,13 +6,13 @@ The backend of **Vertex Connect** is a structured, scalable application powered 
 
 ## Technical Stack
 
-* **Express.js (v5.2.1)**: HTTP web framework.
-* **Socket.io**: Real-time event-driven communication framework.
-* **Mongoose (MongoDB ORM)**: Data schemas, validation, and object mappings.
-* **Redis**: Caching system and WebSocket horizontal adapter.
-* **JSON Web Tokens (JWT)**: Stateless session management and authorization.
-* **Cloudinary**: High-performance storage and CDN for uploaded media.
-* **Multer**: File upload stream handling.
+* **Express.js (v5.2.1)**: Web framework to handle HTTP requests.
+* **Socket.io**: Library for real-time messages and updates.
+* **Mongoose (MongoDB ORM)**: Manages MongoDB schemas, data validation, and queries.
+* **Redis**: Temporary fast storage (caching) and multi-server coordinator.
+* **JSON Web Tokens (JWT)**: Login tokens for stateless user sessions.
+* **Cloudinary**: Cloud storage for images and media files.
+* **Multer**: Handles file uploads.
 
 ---
 
@@ -42,18 +42,18 @@ server/
 
 ## Core Middlewares
 
-### 1. Authorization Middleware (`src/middleware/authMiddleware.js`)
-Protects secure endpoints by inspecting incoming authorization headers:
-* Extracts the token: `Authorization: Bearer <JWT>`
-* Decodes user ID using the secret key.
-* **Performance optimization**: Checks Redis cache for the user's profile (`user:profile:<userId>`) before querying MongoDB.
-* If a cache miss occurs, retrieves user data from MongoDB (excluding password) and caches it for 30 minutes.
-* Attaches the user object to the request: `req.user = user`.
+### 1. User Login Verification (`src/middleware/authMiddleware.js`)
+Protects routes by checking user login tokens in the request headers:
+* Extracts the security token: `Authorization: Bearer <JWT>`
+* Reads the user ID from the token.
+* Checks the Redis cache for the user's profile (`user:profile:<userId>`) before checking MongoDB.
+* If it is not in the cache, it loads the profile from MongoDB (without the password) and saves it in Redis for 30 minutes to make future checks faster.
+* Saves the user information in `req.user` for the rest of the request.
 
 ### 2. File Upload Middleware (`src/middleware/uploadMiddleware.js`)
-Configures **Multer** in-memory storage to capture file buffers. File validation enforces strict constraints:
-* Restricts files by file size and mimetype.
-* Prepares buffers for streaming uploads directly to Cloudinary, avoiding local disk writes.
+Sets up **Multer** to capture files in memory. It enforces safety rules:
+* Restricts file size and types (mimetypes).
+* Sends files directly to Cloudinary without writing them to the server's hard drive.
 
 ---
 
@@ -81,8 +81,8 @@ graph TD
     Controller --> Response[HTTP JSON Response]
 ```
 
-1. **Routing**: The request hits `server.js` and is passed to `src/app.js` which matches the module path prefix (e.g., `/api/message/*`).
-2. **Authentication**: The Auth Middleware verifies the JWT signature and sets the cached user profile.
-3. **Controller Execution**: The controller handles request parsing, executes business logic, and manages database queries.
-4. **Cache Invalidation**: Controllers invalidate relevant caches (e.g. invalidating chat lists in Redis after a new message is sent) to ensure client consistency.
-5. **Response Delivery**: JSON data is formatted and returned to the client along with standard HTTP status codes.
+1. **Routing**: The request goes to `server.js` and then `src/app.js` to find the correct route handler (like `/api/message/*`).
+2. **Authentication**: The Auth Middleware verifies the JWT login token and loads the user profile from cache or database.
+3. **Controller**: The controller runs the actual code, processes inputs, and reads/writes the database.
+4. **Clear Cache**: The controller clears any outdated Redis cache (like deleting the old chat list from cache when a new message is sent) to ensure the client sees updated data.
+5. **Reply**: The server sends back the JSON response along with standard HTTP status codes.

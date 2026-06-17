@@ -6,7 +6,7 @@
 
 ## High-Level System Architecture
 
-The following diagram illustrates the interaction between the React frontend client, the Express server instance, the MongoDB database, and the Redis cache/broker layer:
+This diagram shows how the React frontend, Express backend, MongoDB database, and Redis cache work together:
 
 ```mermaid
 %%{ init: { 'flowchart': { 'curve': 'linear' } } }%%
@@ -70,35 +70,35 @@ flowchart TD
 ```
 
 > [!NOTE]
-> **Scalability Design**: Although currently deployed as a single Express server instance on Render, the system implements a Redis Pub/Sub adapter (`@socket.io/redis-adapter`) to allow horizontal scaling (multiple load-balanced server instances) at any time.
+> **Running on Multiple Servers**: Although currently running as a single Express server on Render, the system uses a Redis Pub/Sub adapter (`@socket.io/redis-adapter`) so that you can run multiple backend servers behind a load balancer at any time.
 
 ---
 
 ## Architectural Decisions
 
 ### 1. Database Caching Layer (Redis)
-To minimize disk reads and optimize latency, the backend leverages Redis for active caches:
-* **User Profiles**: Cached for 30 minutes to shield MongoDB from authentication lookups.
-* **Privacy Controls & Follow States**: Cached for 1 hour to verify message and calling permissions on the fly.
-* **Hashed AI Responses**: Hashed prompts are cached in Redis to instantly serve common questions without invoking model compute.
+To make the backend faster and reduce database load, it stores frequently used data in Redis:
+* **User Profiles**: Cached for 30 minutes so the server doesn't have to check MongoDB for every request.
+* **Privacy & Follow Settings**: Cached for 1 hour to quickly check if a user is allowed to send messages or make calls.
+* **AI Responses**: Saved in Redis so if another user asks the same question, the app can show the saved answer immediately without asking the AI again.
 
-### 2. Horizontal WebSocket Scaling (Redis Adapter)
-Socket.io maintains connections in-memory on each server node. To support horizontal scaling (running multiple server instances behind a load balancer), the servers integrate `@socket.io/redis-adapter`.
-* All socket events are published to Redis Pub/Sub channels.
-* Redis automatically broadcasts events across instances, ensuring that active users can seamlessly exchange messages and call signaling regardless of which server instance they are connected to.
+### 2. Multi-Server WebSockets (Redis Adapter)
+WebSockets are normally saved in a server's temporary memory. To support running multiple servers at the same time, we use `@socket.io/redis-adapter`.
+* All chat events are sent through Redis.
+* Redis shares them with all server instances, so users can chat with each other even if they are connected to different servers.
 
 
-### 3. Active Call Coordination (Mutex-like Lock)
-To prevent users from receiving multiple calls or dial requests simultaneously:
-* Dials and connections check for existing active keys in Redis (`active_call:<userId>`).
-* Initiating a call sets a temporary mutex lock (60-second expire), which is updated to a 2-hour session key once the call is answered.
-* The lock is deleted instantly when the call ends or disconnects.
+### 3. Active Call Coordination (Preventing Double Calls)
+To stop users from making or receiving more than one call at a time:
+* The server checks Redis for an active call key (`active_call:<userId>`) before starting a call.
+* Starting a call locks the user's status for 60 seconds (to handle ringing). If the call is answered, this lock is extended for up to 2 hours.
+* The lock is deleted immediately when the call ends.
 
 ---
 
 ## Real-Time Messaging & Status Data Flow
 
-The sequence diagram below details the path a message takes from transmission to receipt, along with real-time state broadcasts:
+The diagram below shows the path a message takes from being sent to being received:
 
 ```mermaid
 sequenceDiagram
@@ -128,6 +128,6 @@ sequenceDiagram
     deactivate Server
 ```
 
-1. **REST Message Delivery**: Messages are sent via REST endpoints to guarantee ACID transactions, file reference logging, and input validations.
-2. **Cache Invalidation**: The server invalidates the populated chat list caches in Redis for both Alice and Bob.
-3. **Real-time Push**: The message is instantly pushed to Bob over WebSockets. If Bob is active, a `delivered` status notification is returned to update Alice's message receipt state.
+1. **REST Message Delivery**: Messages are sent using standard HTTP requests to ensure they are saved correctly in the database and checked for safety.
+2. **Cache Clear**: The server deletes the old chat list from Redis for both users so they see the new message immediately.
+3. **Real-time Push**: The message is sent to Bob immediately over WebSockets. If Bob is online, Alice gets a "delivered" status checkmark.
