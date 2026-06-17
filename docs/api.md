@@ -124,16 +124,23 @@ The Vertex Connect backend exposes a secure REST API. Protected endpoints requir
 
 ### 2. Fetch Chat Messages
 * **Method & Route**: `GET /api/message/:chatId`
+* **Query Parameters**:
+  * `page` (optional): The page number to retrieve (default: `1`).
+  * `limit` (optional): The number of messages per page (default: `20`).
 * **Headers**: `x-lock-passcode` (required if chat is locked by user)
 * **Success Response (200 OK)**:
   ```json
-  [
-    {
-      "_id": "604f3b2f...",
-      "content": "Hello World!",
-      "sender": { "_id": "603d2b2f...", "username": "johndoe" }
-    }
-  ]
+  {
+    "messages": [
+      {
+        "_id": "604f3b2f...",
+        "content": "Hello World!",
+        "sender": { "_id": "603d2b2f...", "username": "johndoe" }
+      }
+    ],
+    "hasMore": false,
+    "currentPage": 1
+  }
   ```
 
 ---

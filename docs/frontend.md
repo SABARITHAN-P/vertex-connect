@@ -95,3 +95,8 @@ Configures a centralized Axios client with interceptors:
 
 ### 2. Audio Synthesis Cues (`src/utils/toneSynthesizer.js`)
 * Uses browser-synthesized waves via the Web Audio API rather than heavy static sound files. Plays ringtones and sonar dial sounds during incoming/outgoing calls.
+
+### 3. Smooth Infinite Scroll (`src/components/features/chat/ChatWindow.jsx`)
+* **Loading Older Messages:** When you scroll near the top of the chat (close to the top 50px), the app automatically loads the next page of older messages and puts them at the top.
+* **No Screen Jumping:** Normally, inserting older messages at the top makes the screen jitter or jump down. The app measures the height of the newly added messages and adjusts the scroll position instantly, keeping your current view perfectly still.
+* **Handling Images:** Images take time to load and can suddenly push chat text down when they appear. The app watches for image loading events and updates the scrollbar so the screen never shakes.

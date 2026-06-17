@@ -186,6 +186,7 @@ The following features are planned to make Vertex Connect even more secure and c
 1. **End-to-End Message Encryption**: Encrypt messages on the sender's device before transmitting them, so that only the receiver can read them, ensuring absolute chat privacy.
 2. **Offline Notifications**: Send push notifications for new messages and incoming calls directly to the user's desktop or mobile device, even when the browser tab is closed.
 3. **Group Voice and Video Calls**: Expand the calling system from 1-on-1 calls to group calls, allowing multiple users to join the same voice or video conversation at the same time.
+4. **GIF & Sticker Integration**: Add a dedicated media picker featuring animated GIF queries (via Giphy/Tenor APIs) and local sticker packs, designed as a smooth glassmorphic drawer with debounced searching and lazy-loaded image lists.
 
 ---
 
