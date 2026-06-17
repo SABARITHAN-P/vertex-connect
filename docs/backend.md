@@ -79,9 +79,6 @@ graph TD
     Controller --> MongoOps[Database Operations]
     Controller --> RedisOps[Cache Invalidation / Reads]
     Controller --> Response[HTTP JSON Response]
-    
-    style Err401 fill:#f9d5d5,stroke:#c0392b,stroke-width:1px
-    style Response fill:#d4edda,stroke:#28a745,stroke-width:1px
 ```
 
 1. **Routing**: The request hits `server.js` and is passed to `src/app.js` which matches the module path prefix (e.g., `/api/message/*`).
