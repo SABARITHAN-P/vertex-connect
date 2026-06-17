@@ -9,106 +9,71 @@
 The following diagram illustrates the interaction between the React frontend client, the Express server instance, the MongoDB database, and the Redis cache/broker layer:
 
 ```mermaid
-%%{init: {
-  'theme': 'dark',
-  'themeVariables': {
-    'background': '#0f172a',
-    'primaryColor': '#1e293b',
-    'primaryTextColor': '#f8fafc',
-    'lineColor': '#64748b',
-    'edgeLabelBackground': '#0f172a',
-    'fontSize': '13px'
-  }
-}}%%
 graph TD
-    %% Styling Classes
-    classDef clientLayer fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
-    classDef apiLayer fill:#2e1065,stroke:#8b5cf6,stroke-width:2px,color:#f8fafc;
-    classDef serviceLayer fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#f8fafc;
-    classDef dataLayer fill:#431407,stroke:#f97316,stroke-width:2px,color:#f8fafc;
-    classDef extLayer fill:#4a044e,stroke:#d946ef,stroke-width:2px,color:#f8fafc;
-    classDef userNode fill:#111827,stroke:#9ca3af,stroke-dasharray: 5 5,color:#f8fafc;
-
-    %% Client/User Nodes at the top
-    UserA["User A (Sender)"]:::userNode
-    UserB["User B (Receiver)"]:::userNode
-
     %% 1. Client Layer
-    subgraph ClientLayer ["1. Client Layer (React Frontend)"]
-        ClientAppA["React Client A<br/>• Socket.IO Client<br/>• TanStack Query"]:::clientLayer
-        ClientAppB["React Client B<br/>• Socket.IO Client<br/>• TanStack Query"]:::clientLayer
+    subgraph Client Layer
+        Client["React Client App (Vite, Socket.IO Client, TanStack Query)"]
     end
 
     %% 2. API & Realtime Layer
-    subgraph GatewayLayer ["2. API & Realtime Gateway Layer"]
-        ExpressAPI["Express.js API Gateway<br/>• REST Routing & Controllers<br/>• Security & Rate Limiting"]:::apiLayer
-        SocketGateway["Socket.IO Server Gateway<br/>• WSS Connections<br/>• WebSocket Rooms"]:::apiLayer
+    subgraph API & Realtime Layer
+        ExpressAPI["Express.js API Gateway"]
+        SocketGateway["Socket.IO Realtime Gateway"]
     end
 
     %% 3. Business Logic Layer
-    subgraph LogicLayer ["3. Business Logic Layer (Services)"]
-        AuthService["Auth & OTP Service"]:::serviceLayer
-        MsgService["Message & Chat Service"]:::serviceLayer
-        MediaService["Media & Upload Service"]:::serviceLayer
-        AIService["Gemini AI Coordinator"]:::serviceLayer
+    subgraph Business Logic Layer
+        AuthService["Auth & OTP Service"]
+        MsgService["Message & Chat Service"]
+        MediaService["Media & Upload Service"]
+        AIService["Gemini AI Coordinator"]
     end
 
     %% 4. Data Layer
-    subgraph DataLayer ["4. Data & Caching Layer"]
-        MongoDB[("MongoDB Database<br/>• Users & Session Profiles<br/>• Messages & Group Channels<br/>• Notifications<br/>• AI Chat History")]:::dataLayer
-        Redis[("Redis Cache & Message Broker<br/>• Online Presence Cache<br/>• Active Call Mutex Locks<br/>• API Query / Session Cache<br/>• Realtime Message Pub/Sub")]:::dataLayer
+    subgraph Data & Caching Layer
+        MongoDB[(MongoDB Database<br/>• Users & Profiles<br/>• Messages & Groups<br/>• Notifications<br/>• AI Chat History)]
+        Redis[(Redis Cache & Broker<br/>• Online Presence<br/>• Active Call Locks<br/>• Session Caching<br/>• Pub/Sub Adapter)]
     end
 
     %% 5. External Services Layer
-    subgraph ExternalLayer ["5. External Services Layer"]
-        Brevo["Brevo Email API<br/>• Transmits Verification OTPs"]:::extLayer
-        Cloudinary["Cloudinary Cloud Storage<br/>• Image/Video Assets CDN"]:::extLayer
-        GeminiAPI["Gemini AI Cloud API<br/>• BYOK Model Execution"]:::extLayer
+    subgraph External Services Layer
+        Brevo["Brevo Email API (OTP Delivery)"]
+        Cloudinary["Cloudinary Storage (Media CDN)"]
+        GeminiAPI["Gemini AI Cloud API (BYOK Model)"]
     end
 
-    %% --- REQUEST & DATA FLOW PATHS ---
+    %% --- Request & Data Flow ---
 
-    %% User Interaction Flow
-    UserA -->|Interacts| ClientAppA
-    ClientAppB -->|Renders State| UserB
+    %% Client to API Gateways
+    Client -->|HTTPS REST| ExpressAPI
+    Client <-->|WSS WebSockets| SocketGateway
 
-    %% Client Layer to Gateway Layer
-    ClientAppA -->|1. HTTPS REST Requests| ExpressAPI
-    ClientAppA <-->|2a. WSS Connection| SocketGateway
-    ClientAppB <-->|2b. WSS Connection| SocketGateway
-
-    %% Express Gateway to Services
+    %% API Gateways to Services
     ExpressAPI --> AuthService
     ExpressAPI --> MsgService
     ExpressAPI --> MediaService
     ExpressAPI --> AIService
+    
+    %% Socket Gateway presence & pub/sub adapter
+    SocketGateway <-->|Redis Pub/Sub Sync| Redis
 
-    %% WebSocket Broker Broadcast Flow (Socket.IO -> Redis Pub/Sub -> Socket.IO -> User B)
-    SocketGateway <-->|Realtime Pub/Sub Sync| Redis
-    SocketGateway -->|Push Event| ClientAppB
+    %% Services to Data & Caching
+    AuthService -->|Save User Account| MongoDB
+    AuthService -->|Cache Temporary OTP| Redis
 
-    %% Business Services to Data Layer
-    AuthService -->|Write User Account| MongoDB
-    AuthService -->|Set Temporary OTP Cache| Redis
-
-    MsgService -->|Save Chats / Msg Logs| MongoDB
-    MsgService -->|Invalidate User Chat Cache| Redis
+    MsgService -->|Fetch / Persist Messages| MongoDB
+    MsgService -->|Invalidate Populated Chats| Redis
 
     MediaService -->|Check Duplicate SHA-256 Hash| Redis
-    MediaService -->|Save Upload Metadata| MongoDB
+    MediaService -->|Save Media Metadata| MongoDB
 
     AIService -->|Store Prompt History| MongoDB
     AIService -->|Check Prompt Response Cache| Redis
 
-    %% Business Services to External Services
-    AuthService -->|Trigger Verification Email| Brevo
-    MediaService -->|Upload File Buffer Stream| Cloudinary
-    AIService -->|Generate AI Chat Completion| GeminiAPI
-
-    %% External APIs back to Services (Response Path)
-    Brevo -.->|Delivers OTP Email| UserA
-    Cloudinary -.->|Return Secure CDN URL| MediaService
-    GeminiAPI -.->|Return Model Response JSON| AIService
+    %% Services to External API Gateways
+    AuthService -->|Trigger OTP Verification Email| Brevo
+    MediaService -->|Upload Raw File Buffer| Cloudinary
+    AIService -->|Query Prompt Completion| GeminiAPI
 ```
 
 > [!NOTE]
