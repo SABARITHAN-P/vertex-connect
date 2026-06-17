@@ -45,7 +45,7 @@ Vertex Connect is designed as a clean, private, and efficient chat application. 
 Vertex Connect/
 ├── client/                 # Frontend single page application code and assets
 ├── server/                 # Backend API routes, database schemas, and sockets
-├── docs/                   # Exhaustive project documentation suite
+├── docs/                   # Detailed project documentation suite
 ├── .gitignore              # Multi-tier build cache and secret exclusions
 ├── README.md               # Main repository documentation landing page
 └── vercel.json             # Root routing rewrites for Vercel SPA routing
@@ -195,4 +195,4 @@ The following features are planned to make Vertex Connect even more secure and c
 Developed by **Sabarithan P**
 
 * **GitHub**: [SABARITHAN-P](https://github.com/SABARITHAN-P)
-* **LinkedIn**: [Sabarithan P](https://www.linkedin.com/in/sabarithan-p/)
+* **LinkedIn**: [Sabarithan P](https://www.linkedin.com/in/sabarithan-palanivel-302852293/)
