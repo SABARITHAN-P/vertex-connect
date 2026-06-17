@@ -45,8 +45,8 @@ graph TD
     %% --- Request & Data Flow ---
 
     %% Client to API Gateways
-    Client -->|HTTPS REST| ExpressAPI
-    Client <-->|WSS WebSockets| SocketGateway
+    Client --> ExpressAPI
+    Client <--> SocketGateway
 
     %% API Gateways to Services
     ExpressAPI --> AuthService
@@ -55,25 +55,25 @@ graph TD
     ExpressAPI --> AIService
     
     %% Socket Gateway presence & pub/sub adapter
-    SocketGateway <-->|Redis Pub/Sub Sync| Redis
+    SocketGateway <--> Redis
 
     %% Services to Data & Caching
-    AuthService -->|Save User Account| MongoDB
-    AuthService -->|Cache Temporary OTP| Redis
+    AuthService --> MongoDB
+    AuthService --> Redis
 
-    MsgService -->|Fetch / Persist Messages| MongoDB
-    MsgService -->|Invalidate Populated Chats| Redis
+    MsgService --> MongoDB
+    MsgService --> Redis
 
-    MediaService -->|Check Duplicate SHA-256 Hash| Redis
-    MediaService -->|Save Media Metadata| MongoDB
+    MediaService --> Redis
+    MediaService --> MongoDB
 
-    AIService -->|Store Prompt History| MongoDB
-    AIService -->|Check Prompt Response Cache| Redis
+    AIService --> MongoDB
+    AIService --> Redis
 
     %% Services to External API Gateways
-    AuthService -->|Trigger OTP Verification Email| Brevo
-    MediaService -->|Upload Raw File Buffer| Cloudinary
-    AIService -->|Query Prompt Completion| GeminiAPI
+    AuthService --> Brevo
+    MediaService --> Cloudinary
+    AIService --> GeminiAPI
 ```
 
 > [!NOTE]
