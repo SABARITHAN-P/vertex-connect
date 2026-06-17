@@ -30,8 +30,8 @@ graph TD
     classDef userNode fill:#111827,stroke:#9ca3af,stroke-dasharray: 5 5,color:#f8fafc;
 
     %% Client/User Nodes at the top
-    UserA[User A (Sender)]:::userNode
-    UserB[User B (Receiver)]:::userNode
+    UserA["User A (Sender)"]:::userNode
+    UserB["User B (Receiver)"]:::userNode
 
     %% 1. Client Layer
     subgraph ClientLayer ["1. Client Layer (React Frontend)"]
@@ -55,8 +55,8 @@ graph TD
 
     %% 4. Data Layer
     subgraph DataLayer ["4. Data & Caching Layer"]
-        MongoDB[(MongoDB Database<br/>• Users & Session Profiles<br/>• Messages & Group Channels<br/>• Notifications<br/>• AI Chat History)]:::dataLayer
-        Redis[(Redis Cache & Message Broker<br/>• Online Presence Cache<br/>• Active Call Mutex Locks<br/>• API Query / Session Cache<br/>• Realtime Message Pub/Sub)]:::dataLayer
+        MongoDB[("MongoDB Database<br/>• Users & Session Profiles<br/>• Messages & Group Channels<br/>• Notifications<br/>• AI Chat History")]:::dataLayer
+        Redis[("Redis Cache & Message Broker<br/>• Online Presence Cache<br/>• Active Call Mutex Locks<br/>• API Query / Session Cache<br/>• Realtime Message Pub/Sub")]:::dataLayer
     end
 
     %% 5. External Services Layer
