@@ -32,8 +32,7 @@ flowchart TD
 
     %% 4. Data Layer
     subgraph Data & Caching Layer
-        MongoDB[(MongoDB Database<br/>• Users & Profiles<br/>• Messages & Groups<br/>• Notifications<br/>• AI Chat History)]
-        Redis[(Redis Cache & Broker<br/>• Online Presence<br/>• Active Call Locks<br/>• Session Caching<br/>• Pub/Sub Adapter)]
+        DataLayer[("Data & Caching Layer<br/>• MongoDB (Users, Messages, Groups, AI History)<br/>• Redis (Presence, Call Locks, Pub/Sub Adapter)")]
     end
 
     %% 5. External Services Layer
@@ -56,20 +55,13 @@ flowchart TD
     ExpressAPI --> AIService
     
     %% Socket Gateway presence & pub/sub adapter
-    SocketGateway <--> Redis
+    SocketGateway <--> DataLayer
 
     %% Services to Data & Caching
-    AuthService --> MongoDB
-    AuthService --> Redis
-
-    MsgService --> MongoDB
-    MsgService --> Redis
-
-    MediaService --> Redis
-    MediaService --> MongoDB
-
-    AIService --> MongoDB
-    AIService --> Redis
+    AuthService --> DataLayer
+    MsgService --> DataLayer
+    MediaService --> DataLayer
+    AIService --> DataLayer
 
     %% Services to External API Gateways
     AuthService --> Brevo
