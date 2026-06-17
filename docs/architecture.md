@@ -9,7 +9,8 @@
 The following diagram illustrates the interaction between the React frontend client, the Express server instance, the MongoDB database, and the Redis cache/broker layer:
 
 ```mermaid
-graph TD
+%%{ init: { 'flowchart': { 'curve': 'linear' } } }%%
+flowchart TD
     %% 1. Client Layer
     subgraph Client Layer
         Client["React Client App (Vite, Socket.IO Client, TanStack Query)"]
