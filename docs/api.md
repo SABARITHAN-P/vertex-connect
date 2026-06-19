@@ -186,7 +186,7 @@ The Vertex Connect backend exposes a secure REST API. Protected endpoints requir
 
 ## AI Assistant Endpoints (`/api/ai`)
 
-All AI requests require you to be logged in and require a custom header `x-gemini-key` containing your Google Gemini API Key.
+All AI requests require you to be logged in and may require a custom header `x-gemini-key` containing your Google Gemini API Key if the server does not have a global key configured.
 
 ### 1. Create AI Conversation
 * **Method & Route**: `POST /api/ai/conversations`
@@ -202,7 +202,7 @@ All AI requests require you to be logged in and require a custom header `x-gemin
     "_id": "605c3b2f...",
     "user": "603d2b2f...",
     "title": "New Chat",
-    "model": "gemma:latest",
+    "model": "gemini-2.5-flash",
     "temperature": 0.7,
     "maxTokens": 2048,
     "isSaved": false
@@ -220,22 +220,8 @@ All AI requests require you to be logged in and require a custom header `x-gemin
   ```
 * **Success Response (200 OK)**:
   * Sends the text reply piece-by-piece in real-time as it is generated (`Content-Type: text/event-stream`).
-
-### 3. Extract Document Text (Backend-Only / Inactive in UI)
-* **Method & Route**: `POST /api/ai/parse-file`
-* **Request Payload**: Multipart Form-Data with a single file under the key `file` (supports `.pdf`, `.docx`, `.txt`, `.md`).
-* **Success Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "fileName": "document.pdf",
-    "fileSize": 102456,
-    "mimeType": "application/pdf",
-    "extractedText": "Extracted document text content..."
-  }
-  ```
-
 ---
+
 
 ## Error Handling Schemes
 

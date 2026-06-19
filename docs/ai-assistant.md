@@ -1,8 +1,6 @@
 # AI Assistant & Integration System
 
-**Vertex Connect** features a fully integrated personal AI Assistant. It operates strictly as a real-time, text-based conversation drawer utilizing the cloud-hosted Google Gemini API with Google Search grounding. 
-
-While the backend server includes logic for local model routing (via Ollama) and an in-memory document parsing route, these capabilities are currently unexposed in the client user interface.
+**Vertex Connect** features a fully integrated personal AI Assistant. It operates strictly as a real-time, text-based conversation drawer utilizing the cloud-hosted Google Gemini API with Google Search grounding.
 
 ---
 
@@ -14,16 +12,17 @@ The app processes AI requests as follows:
 
 ```mermaid
 graph TD
-    Prompt[User Text Prompt] --> KeyCheck{User Key Available?}
-    
-    KeyCheck -- "Yes (x-gemini-key Header)" --> Gemini[Google Gemini API Engine]
-    Gemini --> GeminiModel[Model: gemini-2.5-flash / gemini-2.5-pro]
-    GeminiModel --> SearchTool[Google Search Grounding Enabled]
-    GeminiModel --> SSE[Server-Sent Events Stream]
-    
-    KeyCheck -- "No Key" --> Block[Client Blocks Chat & Opens settings]
-    
-    SSE --> Client[Client UI Token-by-Token Render]
+    Prompt["User Text Prompt"] --> KeyCheck{"User Key Available?"}
+
+    KeyCheck -->|Yes| Gemini["Google Gemini API Engine\n(x-gemini-key Header)"]
+    Gemini --> GeminiModel["Model:\ngemini-2.5-flash / gemini-2.5-pro"]
+
+    GeminiModel --> SearchTool["Google Search\nGrounding Enabled"]
+    GeminiModel --> SSE["Server-Sent Events Stream"]
+
+    KeyCheck -->|No| Block["Client Blocks Chat\nand Opens Settings"]
+
+    SSE --> Client["Client UI\nToken-by-Token Render"]
 ```
 
 ### Key Management
@@ -49,24 +48,7 @@ To show replies instantly as they are generated:
 * Words are sent to the app immediately as the AI types them.
 * The frontend reads this stream and updates the chat bubble smoothly.
 
----
-
-## 3. Backend-Only Features (Inactive in Client UI)
-
-The backend includes helper tools that are not visible or active in the web interface:
-
-### 1. Document Reader (`POST /api/ai/parse-file`)
-* Reads PDF and DOCX files up to 10MB to extract text.
-* Limits the text to 15,000 characters so it fits in the AI's memory.
-* This endpoint is currently inactive because the frontend does not have file upload buttons for the AI.
-
-### 2. Local AI Fallback
-* The backend has code to connect to a local AI server (Ollama at `http://localhost:11434`).
-* This is currently unused because the app is set up to only route queries to the Gemini API using the user's key.
-
----
-
-## 4. Prompt Response Hashing & Caching
+## 3. Prompt Response Hashing & Caching
 
 To save your Gemini API limits and make responses faster:
 1. The server serializes the conversation history, model settings, and temperatures.

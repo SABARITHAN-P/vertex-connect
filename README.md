@@ -15,6 +15,8 @@ Vertex Connect is designed as a clean, private, and efficient chat application. 
 * **No Audio File Downloads**: To keep the app fast and lightweight, ringtones and calling sounds are generated mathematically by the browser in real-time.
 * **Smart Media Uploads**: If a file or image has already been uploaded by someone else, the server is smart enough to reuse it rather than uploading it again, saving server space.
 * **Reliable Signup Emails**: Uses the Brevo HTTP REST API to send verification emails, ensuring delivery works perfectly on cloud servers (like Render) where standard email ports are blocked.
+* **No Phone Number Required**: Registration and access require only a valid email and username, completely avoiding the privacy risks of collecting sensitive mobile numbers.
+
 
 
 ---
@@ -31,7 +33,7 @@ Vertex Connect is designed as a clean, private, and efficient chat application. 
 | **Caching & Broker** | Redis (caching, online status tables, Socket.io Pub/Sub adapter) |
 | **Real-Time Media** | WebRTC API (direct voice/video calls), Web Audio API (generating ringtones using code) |
 | **Cloud Storage** | Cloudinary API, Multer (direct file uploads) |
-| **AI Assistants** | Google Gemini API (Cloud AI via user keys; backend includes local Ollama backup) |
+| **AI Assistants** | Google Gemini API (Cloud AI via user keys) |
 | **Email Delivery** | Brevo HTTP REST API (production), Nodemailer SMTP (local email backup) |
 
 | **Deployments** | Vercel (frontend SPA rewrites), Render (backend web service keep-alives) |
@@ -172,8 +174,8 @@ If the Redis database crashes or goes offline in production, the app does not sh
 ### 6. Mobile Back Button Interception
 On mobile devices, clicking the physical back button often exits the web page. To resolve this, a custom back button stack intercepts browser history. When a menu drawer or chat settings panel is open, the back button safely closes that specific panel instead of exiting the app.
 
-### 7. Dynamic WebRTC ICE/TURN Server Negotiation
-WebRTC connections fail on strict corporate/academic firewalls and cellular networks (CGNAT). To resolve this securely, the system negotiates dynamic, short-lived TURN credentials from Metered.ca via a secure backend endpoint, falling back automatically to the public Open Relay Project for zero-configuration, cost-free local testing and live demos.
+### 7. WebRTC ICE/TURN Server NAT Traversal
+WebRTC connections fail on strict corporate/academic firewalls and cellular networks (CGNAT). To resolve this securely, the system automatically uses free public STUN/TURN servers from the Open Relay Project and Google for zero-configuration, cost-free testing and live demos, with optional support for fetching dynamic, short-lived TURN credentials from a private Metered.ca account when configured via environment variables.
 
 
 
@@ -187,6 +189,8 @@ The following features are planned to make Vertex Connect even more secure and c
 2. **Offline Notifications**: Send push notifications for new messages and incoming calls directly to the user's desktop or mobile device, even when the browser tab is closed.
 3. **Group Voice and Video Calls**: Expand the calling system from 1-on-1 calls to group calls, allowing multiple users to join the same voice or video conversation at the same time.
 4. **GIF & Sticker Integration**: Add a media picker for search and send animated GIFs and local sticker packs, designed as a smooth popup panel with instant search and fast-loading images.
+5. **In-Context AI Document & Media Uploads**: Integrate document (PDF, DOCX, TXT) and image upload controls in the AI Assistant chat drawer, feeding parsed content and images directly into the Google Gemini context window.
+
 
 ---
 

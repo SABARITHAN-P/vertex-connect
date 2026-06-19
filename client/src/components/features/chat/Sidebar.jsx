@@ -93,7 +93,7 @@ function Sidebar({
     try {
       const { data } = await api.post("/ai/conversations", {
         title: "New Chat",
-        model: "gemma:latest"
+        model: "gemini-2.5-flash"
       });
       setAiConversations(prev => [data, ...prev]);
       handleOpenAiConversation(data);

@@ -91,11 +91,11 @@ Instead of downloading audio files for ringtones, the app creates sound waves di
 
 To make calls work across different networks (like mobile data or strict firewalls), Vertex Connect gets connection paths dynamically:
 
-### 1. Dynamic Settings
-To protect bandwidth from abuse, we do not hardcode call server settings. Instead, the frontend requests temporary connection settings from the backend (`GET /api/call/ice-servers`). The backend connects to Metered.ca to generate settings that expire automatically.
+### 1. Free Public ICE/TURN Servers (Default)
+By default, the app requests connection settings from the backend (`GET /api/call/ice-servers`), which returns public free STUN/TURN servers from the Open Relay Project and Google's public STUN server. This makes voice and video calls work out-of-the-box in local development and production deployments (such as Render) with zero configuration.
 
-### 2. Free Backup Server
-If no Metered.ca settings are set up, the app automatically falls back to public free servers from the Open Relay Project. This makes mobile calls work out-of-the-box during local testing and live demos.
+### 2. Optional Private TURN Servers (Metered.ca)
+For large-scale production where high-volume, dedicated TURN bandwidth is needed, you can optionally configure `METERED_API_KEY` and `METERED_SUBDOMAIN` environment variables. If present, the backend will fetch dynamic, short-lived credentials from Metered.ca instead.
 
 ### 3. Pre-loading
 To prevent delays when calling, the app loads these connection settings in the background (when the app starts, when making a call, or when receiving a call). This makes the call start instantly.

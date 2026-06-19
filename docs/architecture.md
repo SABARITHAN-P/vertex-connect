@@ -31,16 +31,25 @@ flowchart TD
     end
 
     %% 4. Data Layer
-    subgraph Data & Caching Layer
+    subgraph " "
         DataLayer[("Data & Caching Layer<br/>• MongoDB (Users, Messages, Groups, AI History)<br/>• Redis (Presence, Call Locks, Pub/Sub Adapter)")]
+        Title4["Data & Caching Layer"]
+        DataLayer ~~~ Title4
     end
+    style Title4 fill:none,stroke:none
 
     %% 5. External Services Layer
-    subgraph External Services Layer
+    subgraph " "
         Brevo["Brevo Email API (OTP Delivery)"]
         Cloudinary["Cloudinary Storage (Media CDN)"]
         GeminiAPI["Gemini AI Cloud API (BYOK Model)"]
+        Title5["External Services Layer"]
+        Brevo ~~~ Title5
+        Cloudinary ~~~ Title5
+        GeminiAPI ~~~ Title5
     end
+    style Title5 fill:none,stroke:none
+
 
     %% --- Request & Data Flow ---
 

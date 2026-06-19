@@ -4,30 +4,8 @@
 
 ---
 
-## Entity-Relationship Overview
-
-The database connects user profiles, real-time chat messages, settings, and social features:
-
-```mermaid
-erDiagram
-    USER ||--|| PRIVACY_SETTINGS : owns
-    USER ||--|| USER_APPEARANCE : owns
-    USER ||--o{ CHAT : creator-of
-    USER ||--o{ BLOCK : blocker-blocked
-    USER ||--o{ FOLLOW : follower-following
-    USER ||--o{ CALL_HISTORY : caller-receiver
-    USER ||--o{ AI_CONVERSATION : owns
-    USER ||--o{ UNREAD : has
-    CHAT ||--o{ MESSAGE : contains
-    CHAT ||--o{ UNREAD : maps
-    MESSAGE ||--o{ REACTION : contains
-    MESSAGE ||--o{ STATUS : tracks
-    AI_CONVERSATION ||--o{ AI_MESSAGE : contains
-```
-
----
-
 ## Mongoose Schemas & Fields
+
 
 ### 1. User Schema (`User.js`)
 Stores user accounts, passwords, and settings:
