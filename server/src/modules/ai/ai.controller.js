@@ -7,7 +7,6 @@ const redisClient = require("../../config/redis");
 const AiConversation = require("../../models/AiConversation");
 const AiMessage = require("../../models/AiMessage");
 
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const isCloudMode = !!process.env.GEMINI_API_KEY;
 
 /* =========================================================
@@ -88,7 +87,7 @@ exports.createConversation = async (req, res) => {
   const { title, model, temperature } = req.body;
 
   try {
-    const defaultModel = isCloudMode ? "gemini-2.5-flash" : "gemma:latest";
+    const defaultModel = "gemini-2.5-flash";
     const conversation = await AiConversation.create({
       user: userId,
       title: title || "New Chat",
@@ -194,13 +193,20 @@ exports.getMessages = async (req, res) => {
 };
 
 /* =========================================================
-   OLLAMA STREAMING AND CHAT CONTROLLER
+   GEMINI STREAMING AND CHAT CONTROLLER
 ========================================================= */
 
 exports.sendMessage = async (req, res) => {
   const userId = req.user.id || req.user._id;
   const { id } = req.params;
   const { content, attachments = [], regenerate = false } = req.body;
+
+  // Verify that a Gemini API key is present (Cloud Mode)
+  const userApiKey = req.headers["x-gemini-key"] || req.user?.customAiApiKey;
+  const runCloudMode = isCloudMode || !!userApiKey;
+  if (!runCloudMode) {
+    return res.status(400).json({ message: "Gemini API Key is required to use the AI Assistant." });
+  }
 
   try {
     // 1. Verify and retrieve conversation details
@@ -259,7 +265,7 @@ exports.sendMessage = async (req, res) => {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    // 3. Build Chat History for Ollama
+    // 3. Build Chat History for Gemini
     const previousMessages = await AiMessage.find({ conversation: id }).sort({ createdAt: 1 });
     const messagesPayload = [];
 
@@ -346,206 +352,120 @@ CRITICAL SAFETY RULE: You must absolutely refuse to respond to any sensitive, un
       return;
     }
 
-    // 5. Cloud mode routing (if GEMINI_API_KEY or user-provided key is present)
-    const userApiKey = req.headers["x-gemini-key"] || req.user?.customAiApiKey;
-    const runCloudMode = isCloudMode || !!userApiKey;
+    // 5. Cloud mode routing (we already verified runCloudMode is true)
+    console.log("Routing request to Gemini Cloud...");
+    let apiKey = (userApiKey || process.env.GEMINI_API_KEY || "").trim();
+    if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+      apiKey = apiKey.slice(1, -1).trim();
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
+    let modelName = conversation.model.includes("gemini") ? conversation.model : "gemini-2.5-flash";
+    if (modelName.includes("gemini-1.5")) {
+      modelName = modelName.replace("gemini-1.5", "gemini-2.5");
+    }
+    const model = genAI.getGenerativeModel({ 
+      model: modelName,
+      tools: [{ googleSearch: {} }],
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+      ]
+    });
 
-    if (runCloudMode) {
-      console.log("Routing request to Gemini Cloud...");
-      let apiKey = (userApiKey || process.env.GEMINI_API_KEY || "").trim();
-      if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
-        apiKey = apiKey.slice(1, -1).trim();
-      }
-      const genAI = new GoogleGenerativeAI(apiKey);
-      let modelName = conversation.model.includes("gemini") ? conversation.model : "gemini-2.5-flash";
-      if (modelName.includes("gemini-1.5")) {
-        modelName = modelName.replace("gemini-1.5", "gemini-2.5");
-      }
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        tools: [{ googleSearch: {} }],
-        safetySettings: [
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-          },
-        ]
-      });
-
-      const contents = [];
-      previousMessages.forEach((msg) => {
-        if (msg.role === "user") {
-          let msgContent = "";
-          if (msg.attachments && msg.attachments.length > 0) {
-            msg.attachments.forEach((att) => {
-              msgContent += `[ATTACHED FILE: ${att.fileName}]\n${att.extractedText}\n[END OF FILE CONTENT]\n\n`;
-            });
-          }
-          msgContent += msg.content;
-          contents.push({ role: "user", parts: [{ text: msgContent }] });
-        } else {
-          contents.push({ role: "model", parts: [{ text: msg.content }] });
-        }
-      });
-
-      try {
-        const result = await model.generateContentStream({
-          contents,
-          systemInstruction: systemPrompt,
-          generationConfig: {
-            temperature: conversation.temperature,
-            maxOutputTokens: conversation.maxTokens,
-          },
-        });
-
-        let fullGeneratedContent = "";
-
-        req.on("close", () => {
-          console.log("Client closed connection. Stopping Gemini stream...");
-        });
-
-        for await (const chunk of result.stream) {
-          if (res.writableEnded) break;
-
-          const chunkText = chunk.text();
-          fullGeneratedContent += chunkText;
-
-          res.write(`data: ${JSON.stringify({ token: chunkText })}\n\n`);
-        }
-
-        if (!res.writableEnded) {
-          const savedAssistantMsg = await AiMessage.create({
-            conversation: id,
-            role: "assistant",
-            content: fullGeneratedContent,
+    const contents = [];
+    previousMessages.forEach((msg) => {
+      if (msg.role === "user") {
+        let msgContent = "";
+        if (msg.attachments && msg.attachments.length > 0) {
+          msg.attachments.forEach((att) => {
+            msgContent += `[ATTACHED FILE: ${att.fileName}]\n${att.extractedText}\n[END OF FILE CONTENT]\n\n`;
           });
-
-          await redisDel(`ai:messages:${id}`);
-          await redisSet(responseCacheKey, fullGeneratedContent, 3600);
-
-          res.write(`data: ${JSON.stringify({ done: true, message: savedAssistantMsg })}\n\n`);
-          res.end();
         }
-      } catch (streamErr) {
-        console.error("Gemini stream error:", streamErr);
-        try {
-          const fs = require("fs");
-          const path = require("path");
-          fs.appendFileSync(path.join(__dirname, "../../../gemini_error.log"), `[${new Date().toISOString()}] ${streamErr.stack || streamErr.message || streamErr}\n`);
-        } catch (e) {
-          console.error("Failed to write to file log:", e);
-        }
-        if (!res.writableEnded) {
-          let userFriendlyError = `⚠️ **Gemini API Error**: I couldn't generate a response.\n\n`;
-          const errMsg = streamErr.message || "";
-          
-          if (errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID") || errMsg.includes("key is invalid")) {
-            userFriendlyError += `The API key provided is invalid. Please open the main **Settings** (gear icon in the bottom-left sidebar), go to **AI Assistant**, and double-check your custom API key.`;
-          } else if (errMsg.includes("429") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("limit")) {
-            userFriendlyError += `The API key has exceeded its rate limit or quota. Please wait a minute before trying again, or go to the main **Settings** (gear icon in the bottom-left sidebar), select **AI Assistant**, and provide your own Gemini API key.`;
-          } else {
-            userFriendlyError += `Details: *${errMsg || "An unknown error occurred during generation."}*`;
-          }
-
-          res.write(`data: ${JSON.stringify({ token: userFriendlyError })}\n\n`);
-          res.write(`data: ${JSON.stringify({ done: true, error: true })}\n\n`);
-          res.end();
-        }
+        msgContent += msg.content;
+        contents.push({ role: "user", parts: [{ text: msgContent }] });
+      } else {
+        contents.push({ role: "model", parts: [{ text: msg.content }] });
       }
-      return;
-    }
-
-    // 6. Query Ollama and Stream Live Response
-    const abortController = new AbortController();
-
-    req.on("close", () => {
-      console.log("Client closed connection. Aborting Ollama stream...");
-      abortController.abort();
     });
 
-    let ollamaResponse;
     try {
-      ollamaResponse = await axios({
-        method: "post",
-        url: `${OLLAMA_URL}/api/chat`,
-        data: fullPayload,
-        responseType: "stream",
-        signal: abortController.signal,
+      const result = await model.generateContentStream({
+        contents,
+        systemInstruction: systemPrompt,
+        generationConfig: {
+          temperature: conversation.temperature,
+          maxOutputTokens: conversation.maxTokens,
+        },
       });
-    } catch (ollamaErr) {
-      console.error("Failed to connect to Ollama server:", ollamaErr.message);
-      // Return a friendly offline error to the stream
-      const errMsg = `⚠️ **Ollama Offline**: I couldn't connect to the local Ollama instance at \`${OLLAMA_URL}\`. 
 
-Please make sure:
-1. **Ollama** is downloaded and running on your local machine.
-2. The model **\`${conversation.model}\`** is installed (run \`ollama run ${conversation.model}\` in your terminal).
-3. If Ollama is running on a different port, update the \`OLLAMA_URL\` environment variable on the server.`;
-      
-      res.write(`data: ${JSON.stringify({ token: errMsg })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, error: true })}\n\n`);
-      res.end();
-      return;
-    }
+      let fullGeneratedContent = "";
 
-    let fullGeneratedContent = "";
+      req.on("close", () => {
+        console.log("Client closed connection. Stopping Gemini stream...");
+      });
 
-    // Parse stream chunks line by line
-    ollamaResponse.data.on("data", (chunk) => {
-      const lines = chunk.toString().split("\n");
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const parsed = JSON.parse(line);
-          const token = parsed.message?.content || "";
-          fullGeneratedContent += token;
+      for await (const chunk of result.stream) {
+        if (res.writableEnded) break;
 
-          res.write(`data: ${JSON.stringify({ token })}\n\n`);
-        } catch (e) {
-          // ignore incomplete JSON lines
-        }
+        const chunkText = chunk.text();
+        fullGeneratedContent += chunkText;
+
+        res.write(`data: ${JSON.stringify({ token: chunkText })}\n\n`);
       }
-    });
 
-    ollamaResponse.data.on("end", async () => {
-      try {
-        // Save assistant message to DB
+      if (!res.writableEnded) {
         const savedAssistantMsg = await AiMessage.create({
           conversation: id,
           role: "assistant",
           content: fullGeneratedContent,
         });
 
-        // Invalidate message list cache
         await redisDel(`ai:messages:${id}`);
-
-        // Save generated response to Cache (TTL 1 hour)
         await redisSet(responseCacheKey, fullGeneratedContent, 3600);
 
         res.write(`data: ${JSON.stringify({ done: true, message: savedAssistantMsg })}\n\n`);
         res.end();
-      } catch (err) {
-        console.error("Error saving assistant message:", err);
+      }
+    } catch (streamErr) {
+      console.error("Gemini stream error:", streamErr);
+      try {
+        const fs = require("fs");
+        const path = require("path");
+        fs.appendFileSync(path.join(__dirname, "../../../gemini_error.log"), `[${new Date().toISOString()}] ${streamErr.stack || streamErr.message || streamErr}\n`);
+      } catch (e) {
+        console.error("Failed to write to file log:", e);
+      }
+      if (!res.writableEnded) {
+        let userFriendlyError = `⚠️ **Gemini API Error**: I couldn't generate a response.\n\n`;
+        const errMsg = streamErr.message || "";
+        
+        if (errMsg.includes("API key not valid") || errMsg.includes("API_KEY_INVALID") || errMsg.includes("key is invalid")) {
+          userFriendlyError += `The API key provided is invalid. Please open the main **Settings** (gear icon in the bottom-left sidebar), go to **AI Assistant**, and double-check your custom API key.`;
+        } else if (errMsg.includes("429") || errMsg.includes("Quota exceeded") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("limit")) {
+          userFriendlyError += `The API key has exceeded its rate limit or quota. Please wait a minute before trying again, or go to the main **Settings** (gear icon in the bottom-left sidebar), select **AI Assistant**, and provide your own Gemini API key.`;
+        } else {
+          userFriendlyError += `Details: *${errMsg || "An unknown error occurred during generation."}*`;
+        }
+
+        res.write(`data: ${JSON.stringify({ token: userFriendlyError })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, error: true })}\n\n`);
         res.end();
       }
-    });
-
-    ollamaResponse.data.on("error", (err) => {
-      console.error("Stream reader error:", err);
-      res.end();
-    });
+    }
 
   } catch (error) {
     console.error("Error in AI sendMessage:", error);
@@ -566,60 +486,14 @@ Please make sure:
 };
 
 /* =========================================================
-   GET INSTALLED OLLAMA MODELS
+   GET AVAILABLE AI MODELS
 ========================================================= */
 exports.getModels = async (req, res) => {
-  const cacheKey = "ai:models";
-
-  const userApiKey = req.headers["x-gemini-key"];
-  const runCloudMode = isCloudMode || !!userApiKey;
-
-  if (runCloudMode) {
-    return res.status(200).json({
-      ollamaConnected: false,
-      isCloud: true,
-      models: ["gemini-2.5-flash", "gemini-2.5-pro"],
-    });
-  }
-
-  try {
-    // Check Cache
-    const cached = await redisGet(cacheKey);
-    if (cached) {
-      return res.status(200).json(JSON.parse(cached));
-    }
-
-    const response = await axios.get(`${OLLAMA_URL}/api/tags`, { timeout: 3000 });
-    const modelsList = response.data.models || [];
-
-    const result = {
-      ollamaConnected: true,
-      models: modelsList.map((m) => m.name),
-    };
-
-    // Cache list for 60 seconds
-    await redisSet(cacheKey, JSON.stringify(result), 60);
-
-    return res.status(200).json(result);
-  } catch (error) {
-    console.warn("Ollama is not running. Returning default model options.");
-    
-    // Default fallback models
-    const fallback = {
-      ollamaConnected: false,
-      models: [
-        "gemma:latest",
-        "gemma2:2b",
-        "llama3:latest",
-        "llama3:8b",
-        "mistral:latest",
-        "phi3:latest",
-        "qwen2:7b",
-      ],
-    };
-
-    return res.status(200).json(fallback);
-  }
+  return res.status(200).json({
+    ollamaConnected: false,
+    isCloud: true,
+    models: ["gemini-2.5-flash", "gemini-2.5-pro"],
+  });
 };
 
 /* =========================================================

@@ -30,7 +30,7 @@ router.delete("/conversations/:id", aiController.deleteConversation);
 router.get("/conversations/:id/messages", aiController.getMessages);
 router.post("/conversations/:id/messages", aiController.sendMessage);
 
-// Ollama Models
+// AI Models
 router.get("/models", aiController.getModels);
 
 // File Parser (extracts text from PDF/DOCX/TXT/MD buffers)

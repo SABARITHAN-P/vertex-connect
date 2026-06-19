@@ -15,7 +15,7 @@ const aiConversationSchema = new mongoose.Schema(
     },
     model: {
       type: String,
-      default: "gemma:latest",
+      default: "gemini-2.5-flash",
     },
     temperature: {
       type: Number,

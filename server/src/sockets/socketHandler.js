@@ -1,7 +1,11 @@
+const crypto = require("crypto");
 const User = require("../models/User");
 const redisClient = require("../config/redis");
 const PrivacySettings = require("../models/PrivacySettings");
 const { getCachedPrivacySettings, invalidateChatsCache } = require("../utils/cacheHelper");
+
+const SERVER_ID = crypto.randomUUID();
+console.log(`[Presence] Generated unique Server ID: ${SERVER_ID}`);
 
 const invalidateChatsForUserContacts = async (userId) => {
   if (!userId) return;
@@ -38,41 +42,146 @@ const emitOnlineUsers = async (io) => {
   }
 };
 
+const startHeartbeat = async () => {
+  try {
+    if (redisClient.isOpen) {
+      await redisClient.sAdd("active_servers", SERVER_ID);
+      await redisClient.set(`server_heartbeat:${SERVER_ID}`, "alive", { EX: 30 });
+    }
+  } catch (err) {
+    console.error(`[Presence] Failed to send heartbeat for server ${SERVER_ID}:`, err);
+  }
+};
+
+const cleanupDeadServers = async (io) => {
+  try {
+    if (!redisClient.isOpen) return;
+
+    const servers = await redisClient.sMembers("active_servers");
+    for (const sId of servers) {
+      if (sId === SERVER_ID) continue;
+
+      const isAlive = await redisClient.exists(`server_heartbeat:${sId}`);
+      if (!isAlive) {
+        console.log(`[Presence] Server ${sId} is dead/inactive. Cleaning up orphaned sockets...`);
+
+        // Get all sockets associated with this dead server
+        const orphanedSockets = await redisClient.sMembers(`server_sockets:${sId}`);
+        for (const socketId of orphanedSockets) {
+          const userId = await redisClient.get(`socket_user:${socketId}`);
+          if (userId) {
+            // Remove from the user's global socket list
+            await redisClient.sRem(`user_sockets:${userId}`, socketId);
+            await redisClient.del(`socket_user:${socketId}`);
+
+            // Check if user has no sockets left globally
+            const remainingCount = await redisClient.sCard(`user_sockets:${userId}`);
+            if (remainingCount === 0) {
+              await redisClient.sRem("online_users", userId);
+
+              const lastSeen = new Date();
+              await User.findByIdAndUpdate(userId, {
+                status: "offline",
+                lastSeen,
+              });
+
+              // Notify other users
+              io.emit("userOffline", { userId, lastSeen });
+              io.emit("user:offline", { userId, lastSeen });
+              console.log(`[Presence] Cleanup marked user ${userId} offline (last socket was on dead server ${sId})`);
+            }
+          }
+        }
+
+        // Clean up server-specific keys
+        await redisClient.del(`server_sockets:${sId}`);
+        await redisClient.sRem("active_servers", sId);
+        console.log(`[Presence] Completed cleanup for dead server ${sId}`);
+      }
+    }
+  } catch (err) {
+    console.error("[Presence] Error during dead servers cleanup:", err);
+  }
+};
+
+const cleanShutdown = async (io) => {
+  try {
+    console.log(`[Presence] Clean shutdown initiated for server ${SERVER_ID}. Cleaning up local sockets...`);
+    if (redisClient.isOpen) {
+      const localSockets = await redisClient.sMembers(`server_sockets:${SERVER_ID}`);
+      for (const socketId of localSockets) {
+        const userId = await redisClient.get(`socket_user:${socketId}`);
+        if (userId) {
+          await redisClient.sRem(`user_sockets:${userId}`, socketId);
+          await redisClient.del(`socket_user:${socketId}`);
+
+          const remainingCount = await redisClient.sCard(`user_sockets:${userId}`);
+          if (remainingCount === 0) {
+            await redisClient.sRem("online_users", userId);
+
+            const lastSeen = new Date();
+            await User.findByIdAndUpdate(userId, {
+              status: "offline",
+              lastSeen,
+            });
+
+            if (io) {
+              io.emit("userOffline", { userId, lastSeen });
+              io.emit("user:offline", { userId, lastSeen });
+            }
+          }
+        }
+      }
+
+      await redisClient.del(`server_sockets:${SERVER_ID}`);
+      await redisClient.sRem("active_servers", SERVER_ID);
+      await redisClient.del(`server_heartbeat:${SERVER_ID}`);
+      console.log(`[Presence] Clean shutdown socket cleanup completed for server ${SERVER_ID}.`);
+    }
+  } catch (err) {
+    console.error("[Presence] Error during clean shutdown:", err);
+  }
+};
+
 const socketHandler = (io) => {
-  // Clear all stale sockets and online users from Redis on server startup/initialization!
+  // Initialize server presence and run cleanup scan for dead servers
   (async () => {
     try {
       if (!redisClient.isOpen) {
         await new Promise((resolve) => {
           redisClient.once("ready", resolve);
-          // Safety timeout in case Redis is not running or down
           setTimeout(resolve, 3000);
         });
       }
 
       if (redisClient.isOpen) {
-        console.log("Initializing socket handler, cleaning stale presence cache...");
+        console.log("Initializing socket handler, checking for dead servers...");
         
-        // 1. Delete all user_sockets:* keys
-        const keys = await redisClient.keys("user_sockets:*");
-        if (keys && keys.length > 0) {
-          await redisClient.del(keys);
-        }
+        // Register this server in the active server registry
+        await startHeartbeat();
+        // Start the periodic heartbeat
+        setInterval(startHeartbeat, 10000);
+
+        // Run the startup scan for dead servers
+        await cleanupDeadServers(io);
         
-        // 2. Delete the online_users set
-        await redisClient.del("online_users");
-        
-        // 3. Set all users to offline in the database on server startup
-        await User.updateMany({ status: "online" }, { status: "offline", lastSeen: new Date() });
-        
-        console.log("Presence cache cleared successfully on startup.");
+        console.log("Server presence registration and cleanup scan completed.");
       } else {
-        console.warn("Skipping Redis presence cache cleanup: Redis client is not open.");
+        console.warn("Skipping Redis server presence registration: Redis client is not open.");
       }
     } catch (err) {
-      console.error("Failed to clean presence cache on startup:", err);
+      console.error("Failed to initialize server presence:", err);
     }
   })();
+
+  // Handle clean shutdowns
+  const shutdownHandler = async () => {
+    await cleanShutdown(io);
+    process.exit(0);
+  };
+
+  process.once("SIGINT", shutdownHandler);
+  process.once("SIGTERM", shutdownHandler);
 
   io.on("connection", (socket) => {
     console.log("New Socket Connected:", socket.id);
@@ -92,6 +201,8 @@ const socketHandler = (io) => {
 
         /* MULTIPLE TABS SUPPORT GLOBALLY VIA REDIS */
         await redisClient.sAdd(`user_sockets:${userId}`, socket.id);
+        await redisClient.sAdd(`server_sockets:${SERVER_ID}`, socket.id);
+        await redisClient.set(`socket_user:${socket.id}`, userId, { EX: 86400 });
         await redisClient.sAdd("online_users", userId);
 
         /* UPDATE USER ONLINE */
@@ -343,13 +454,15 @@ const socketHandler = (io) => {
 
         // Remove socket globally from Redis
         await redisClient.sRem(`user_sockets:${userId}`, socket.id);
+        await redisClient.sRem(`server_sockets:${SERVER_ID}`, socket.id);
+        await redisClient.del(`socket_user:${socket.id}`);
 
-        // Check if the user has any active sockets on this server
-        const activeRoomSockets = io.sockets.adapter.rooms.get(userId.toString());
-        const hasActiveSockets = activeRoomSockets && activeRoomSockets.size > 0;
+        // Check if the user has any active sockets globally
+        const remainingSockets = await redisClient.sMembers(`user_sockets:${userId}`);
+        const hasActiveSockets = remainingSockets && remainingSockets.length > 0;
 
         if (!hasActiveSockets) {
-          // No active sockets left! Clean up Redis and set offline
+          // No active sockets left globally! Clean up Redis and set offline
           await redisClient.del(`user_sockets:${userId}`);
           await redisClient.sRem("online_users", userId);
 
@@ -376,11 +489,14 @@ const socketHandler = (io) => {
 
           console.log("User Removed Globally (No active sockets):", userId);
         } else {
-          // Prune any stale socket IDs from Redis that are not actually connected
-          const cachedSockets = await redisClient.sMembers(`user_sockets:${userId}`);
-          for (const sId of cachedSockets) {
-            if (!activeRoomSockets.has(sId)) {
+          // Prune any stale socket IDs from Redis that belong to this server but are not actually active
+          const activeRoomSockets = io.sockets.adapter.rooms.get(userId.toString());
+          for (const sId of remainingSockets) {
+            const isLocal = io.sockets.sockets.has(sId);
+            if (isLocal && (!activeRoomSockets || !activeRoomSockets.has(sId))) {
               await redisClient.sRem(`user_sockets:${userId}`, sId);
+              await redisClient.sRem(`server_sockets:${SERVER_ID}`, sId);
+              await redisClient.del(`socket_user:${sId}`);
             }
           }
         }
@@ -398,8 +514,10 @@ const socketHandler = (io) => {
 
 const isUserInChat = async (userId, chatId, io) => {
   if (!userId || !chatId || !io) return false;
-  const roomSockets = io.sockets.adapter.rooms.get(chatId.toString());
-  if (!roomSockets) return false;
+  
+  // Get all socket IDs in the chat room across the entire cluster
+  const roomSockets = await io.in(chatId.toString()).allSockets();
+  if (!roomSockets || roomSockets.size === 0) return false;
 
   const userSockets = await redisClient.sMembers(`user_sockets:${userId.toString()}`);
   if (!userSockets || userSockets.length === 0) return false;
