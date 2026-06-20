@@ -144,6 +144,15 @@ Vite will compile assets and serve the frontend application at `http://localhost
 
 ---
 
+## Quick Start & Testing
+
+To test the real-time messaging functionality:
+1. Register a new user account on the signup page.
+2. Use the search bar to locate the administrator username: **`sabari`**.
+3. Send a message to initiate a real-time chat session.
+
+---
+
 ## Security Notes
 
 Vertex Connect enforces secure transmission and access rules across all services:
